@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Coletor GeoJSON Obras - Leaflet (R0)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;height:100vh}
+#map{height:54vh}
+#controls{padding:8px;background:#fafafa;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center}
+#tabela-container{height:42vh;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:6px;font-size:13px}
+input,select,textarea{width:100%;box-sizing:border-box;padding:4px}
+button{padding:6px 10px;cursor:pointer}
+.invalid{background:#ffe7e7}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="controls">
+  <button id="btn-settings">Configurações</button>
+
+  <input id="fileImport" type="file" accept=".geojson,.json">
+  <button id="btn-export-csv">Exportar CSV</button>
+  <button id="btn-export-geojson">Exportar GeoJSON</button>
+  <button id="btn-limpar">Limpar</button>
+  <div style="margin-left:auto;font-size:13px">Desenhe POINT/LINESTRING/POLYGON ou importe um GeoJSON</div>
+</div>
+<div id="tabela-container">
+<table>
+<thead>
+<tr id="thead-row">
+  <th>id</th><th>lote</th><th>rodovia</th><th>programa</th><th>item</th><th>subitem</th><th>detalhamento_servico</th>
+  <th>unidade</th><th>quantidade</th><th>km_inicial</th><th>km_final</th><th>local</th>
+  <th>data_inicial</th><th>data_final</th><th>observacoes_gerais</th><th>wkt</th><th>Ações</th>
+</tr>
+</thead>
+<tbody id="tbody-obras"></tbody>
+</table>
+</div>
+<div id="settings-panel" style="display:none;padding:10px;background:#f0f0f0;border-top:1px solid #ccc;">
+<label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13"></label>
+<label>Fonte: <input type="text" id="cfg-font-family" value="Arial"></label>
+<label>Cor do texto: <input type="color" id="cfg-font-color" value="#000000"></label>
+<button id="cfg-apply">Aplicar</button>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Settings, theme and column-resize logic -->
+<script>
+(function(){
+  const panel = document.getElementById('settings-panel');
+  // build panel content with theme and presets
+  panel.innerHTML = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13" min="10" max="30" style="width:70px"></label>
+      <label>Fonte: <input type="text" id="cfg-font-family" value="Arial" style="width:140px"></label>
+      <label>Cor do texto: <input type="color" id="cfg-font-color" value="#000000"></label>
+      <label>Tema: <select id="cfg-theme"><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
+      <label>Presets: <select id="cfg-presets"><option value="default">Padrão</option><option value="compact">Compacto</option><option value="large">Grande</option><option value="contrast">Alto Contraste</option></select></label>
+      <button id="cfg-apply">Aplicar</button>
+      <button id="cfg-reset">Reset</button>
+    </div>
+    <div style="margin-top:8px;font-size:12px;color:#666">Arraste o lado direito dos cabeçalhos da tabela para redimensionar colunas.</div>
+  `;
+
+  // toggle panel
+  document.getElementById('btn-settings').addEventListener('click',()=>{
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // apply and reset
+  document.getElementById('cfg-apply').addEventListener('click',applySettings);
+  document.getElementById('cfg-reset').addEventListener('click',resetSettings);
+
+  function applySettings(){
+    const size = document.getElementById('cfg-font-size').value + 'px';
+    const family = document.getElementById('cfg-font-family').value;
+    const color = document.getElementById('cfg-font-color').value;
+    const theme = document.getElementById('cfg-theme').value;
+    const preset = document.getElementById('cfg-presets').value;
+
+    const table = document.querySelector('table');
+    table.style.fontSize = size;
+    table.style.fontFamily = family;
+    table.style.color = color;
+
+    document.querySelectorAll('th,td,input,textarea').forEach(el=>{
+      el.style.fontSize = size;
+      el.style.fontFamily = family;
+      el.style.color = color;
+    });
+
+    applyTheme(theme);
+    applyPreset(preset);
+  }
+
+  function resetSettings(){
+    document.getElementById('cfg-font-size').value = 13;
+    document.getElementById('cfg-font-family').value = 'Arial';
+    document.getElementById('cfg-font-color').value = '#000000';
+    document.getElementById('cfg-theme').value = 'light';
+    document.getElementById('cfg-presets').value = 'default';
+    applySettings();
+  }
+
+  function applyTheme(t){
+    if(t==='dark'){
+      document.body.style.background = '#121212';
+      document.body.style.color = '#eee';
+      document.getElementById('controls').style.background = '#1e1e1e';
+      document.getElementById('controls').style.borderTop = '1px solid #333';
+      document.querySelectorAll('table, th, td, input, textarea, button').forEach(el=>{
+        el.style.background = el.tagName.toLowerCase()==='td' || el.tagName.toLowerCase()==='th' ? '#222' : '#2a2a2a';
+        el.style.color = '#eee';
+        if(el.tagName.toLowerCase()==='table') el.style.borderColor = '#333';
+      });
+      document.getElementById('map').style.filter = 'brightness(0.95)';
+    } else {
+      // light
+      document.body.style.background = '';
+      document.body.style.color = '';
+      document.getElementById('controls').style.background = '';
+      document.getElementById('controls').style.borderTop = '';
+      document.querySelectorAll('table, th, td, input, textarea, button').forEach(el=>{
+        el.style.background = '';
+        el.style.color = '';
+        if(el.tagName.toLowerCase()==='table') el.style.borderColor = '';
+      });
+      document.getElementById('map').style.filter = '';
+    }
+  }
+
+  function applyPreset(p){
+    const table = document.querySelector('table');
+    if(p==='compact'){
+      table.style.fontSize = '11px';
+      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding = '4px'; });
+    } else if(p==='large'){
+      table.style.fontSize = '16px';
+      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding = '10px'; });
+    } else if(p==='contrast'){
+      document.querySelectorAll('th,td').forEach(c=>{ c.style.background='#000'; c.style.color='#fff'; });
+    } else {
+      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding='6px'; c.style.background=''; c.style.color=''; });
+    }
+    // re-enable column resizers after preset
+    setTimeout(makeColumnsResizable,50);
+  }
+
+  // add column resizers to header
+  function makeColumnsResizable(){
+    const ths = document.querySelectorAll('thead th');
+    ths.forEach(th=>{ if(th.querySelector('.col-resizer')) return; th.style.position='relative'; const resizer = document.createElement('div'); resizer.className='col-resizer'; resizer.style.position='absolute'; resizer.style.right='0'; resizer.style.top='0'; resizer.style.width='6px'; resizer.style.cursor='col-resize'; resizer.style.userSelect='none'; resizer.style.height='100%'; resizer.style.zIndex='10'; resizer.style.background='transparent'; th.appendChild(resizer);
+      resizer.addEventListener('mousedown', initResize.bind(null,th));
+    });
+  }
+  function initResize(th, e){
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = th.offsetWidth;
+    function onMove(ev){ const newWidth = startWidth + (ev.clientX - startX); if(newWidth>40) th.style.width = newWidth+'px'; }
+    function onUp(){ window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  // initial setup
+  makeColumnsResizable();
+  // expose for debugging
+  window.__collect_settings = { applySettings, resetSettings, makeColumnsResizable };
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+let obras = [];
+const map = L.map('map').setView([-23.55,-46.63],10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+const drawnItems = new L.FeatureGroup().addTo(map);
+const drawControl = new L.Control.Draw({draw:{polyline:true,polygon:true,marker:true,rectangle:false,circle:false,circlemarker:false},edit:{featureGroup:drawnItems}});
+map.addControl(drawControl);
+map.on(L.Draw.Event.CREATED, function(e){const layer=e.layer;drawnItems.addLayer(layer);const geom=layerToGeometry(layer);const id=ensureUniqueId(e.layer.feature?.properties?.id);const latlng=getRepresentativePoint(layer);const entry=baseEntry(id,layer,geom,latlng);obras.push(entry);atualizarTabela();});
+function ensureUniqueId(pref){let base = pref || `obra-${Date.now()}`; let id = base; let i=1; while(obras.some(o=>o.id===id)){id = base+'-'+i; i++;} return id;}
+function baseEntry(id,layer,geom,rep){return {id, lote:'', rodovia:'', programa:'', item:'', subitem:'', detalhamento_servico:'', unidade:'', quantidade:'', km_inicial:'', km_final:'', local:[], data_inicial:'', data_final:'', observacoes_gerais:null, wkt:geomWKT(geom), geometry:geom, layer:layer, representative:rep};}
+function layerToGeometry(layer){ if(layer instanceof L.FeatureGroup){const pts=[]; layer.eachLayer(l=>{ if(l.getLatLng) { const c=l.getLatLng(); pts.push([Number(c.lng),Number(c.lat)]); }}); return {type:'MultiPoint', coordinates: pts}; } if(layer instanceof L.Marker || layer instanceof L.CircleMarker){const c=layer.getLatLng(); return {type:'Point', coordinates: [Number(c.lng), Number(c.lat)]}; } if(layer instanceof L.Polygon){const rings = layer.getLatLngs(); return {type:'Polygon', coordinates: rings.map(r=>r.map(p=>[Number(p.lng),Number(p.lat)]))}; } if(layer instanceof L.Polyline){const latlngs = layer.getLatLngs(); return {type:'LineString', coordinates: latlngs.map(p=>[Number(p.lng),Number(p.lat)])}; } return null; }
+function getRepresentativePoint(layer){ if(layer instanceof L.Marker || layer instanceof L.CircleMarker) return layer.getLatLng(); if(layer.getBounds) return layer.getBounds().getCenter(); if(layer.getLatLngs) return L.latLngBounds(layer.getLatLngs()).getCenter(); return map.getCenter(); }
+function geomWKT(geom){ if(!geom) return ''; if(geom.type==='Point') return `POINT(${geom.coordinates[0]} ${geom.coordinates[1]})`; if(geom.type==='LineString') return `LINESTRING(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; if(geom.type==='Polygon') return `POLYGON(${geom.coordinates.map(r=>'('+r.map(c=>c.join(' ')).join(', ')+')').join(',')})`; if(geom.type==='MultiPoint') return `MULTIPOINT(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; return ''; }
+function atualizarTabela(){const tb=document.getElementById('tbody-obras');tb.innerHTML='';obras.forEach((o,idx)=>{const tr=document.createElement('tr');tr.innerHTML=`<td><input data-f="id" data-i="${idx}" value="${escapeHtml(o.id)}"></td><td><input data-f="lote" data-i="${idx}" value="${escapeHtml(o.lote)}"></td><td><input data-f="rodovia" data-i="${idx}" value="${escapeHtml(o.rodovia)}"></td><td><input data-f="programa" data-i="${idx}" value="${escapeHtml(o.programa)}"></td><td><input data-f="item" data-i="${idx}" value="${escapeHtml(o.item)}"></td><td><input data-f="subitem" data-i="${idx}" value="${escapeHtml(o.subitem)}"></td><td><input data-f="detalhamento_servico" data-i="${idx}" value="${escapeHtml(o.detalhamento_servico)}"></td><td><input data-f="unidade" data-i="${idx}" value="${escapeHtml(o.unidade)}"></td><td><input data-f="quantidade" data-i="${idx}" value="${escapeHtml(o.quantidade)}"></td><td><input data-f="km_inicial" data-i="${idx}" value="${escapeHtml(o.km_inicial)}"></td><td><input data-f="km_final" data-i="${idx}" value="${escapeHtml(o.km_final)}"></td><td><input data-f="local" data-i="${idx}" placeholder="PISTA_NORTE;PISTA_SUL" value="${Array.isArray(o.local)?escapeHtml(o.local.join(';')):escapeHtml(o.local)}"></td><td><input type="date" data-f="data_inicial" data-i="${idx}" value="${o.data_inicial||''}"></td><td><input type="date" data-f="data_final" data-i="${idx}" value="${o.data_final||''}"></td><td><input data-f="observacoes_gerais" data-i="${idx}" value="${o.observacoes_gerais||''}"></td><td><textarea data-f="wkt" data-i="${idx}" readonly>${escapeHtml(o.wkt)}</textarea></td><td><button data-del="${idx}">Excluir</button></td>`;tb.appendChild(tr);});}
+function escapeHtml(s){if(s===null||s===undefined) return '';return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+document.getElementById('tbody-obras').addEventListener('input',e=>{const f=e.target.dataset.f;const i=Number(e.target.dataset.i);if(!f||Number.isNaN(i)||!obras[i]) return;let val=e.target.value; if(f==='local') val=val.replace(/\s/g,''); if(['quantidade','km_inicial','km_final'].includes(f)) val=val.replace(/,/g,'.'); if(f==='observacoes_gerais'&&val==='') val=null; obras[i][f]=val; if(f==='lote') validateLote(e.target); if(['quantidade','km_inicial','km_final'].includes(f)) validateDecimal(e.target); if(['data_inicial','data_final'].includes(f)) validateDate(e.target);});
+function validateLote(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^L\d{2}$/.test(v));}
+function validateDecimal(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d+(\.\d+)?$/.test(v));}
+function validateDate(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(v));}
+document.getElementById('tbody-obras').addEventListener('click',e=>{const del=e.target.dataset.del;if(del===undefined) return;const idx=Number(del);if(Number.isNaN(idx)||!obras[idx]) return;const layer=obras[idx].layer;if(layer){ if(layer instanceof L.FeatureGroup){drawnItems.removeLayer(layer);} else drawnItems.removeLayer(layer);} obras.splice(idx,1);atualizarTabela();});
+function exportCSV(){if(obras.length===0){alert('Sem obras');return;}const campos=['id','lote','rodovia','programa','item','subitem','detalhamento_servico','unidade','quantidade','km_inicial','km_final','local','data_inicial','data_final','observacoes_gerais','wkt'];const linhas=[campos.join(',')];const ids=new Set();for(const o of obras){if(ids.has(o.id)){alert('IDs duplicados: '+o.id);return;}ids.add(o.id);const vals=campos.map(c=>{let v=o[c];if(v===null||v===undefined) v='';if(Array.isArray(v)) v=v.join(';');return `"${String(v).replace(/"/g,'""')}"`;});linhas.push(vals.join(','));}baixar(linhas.join('\n'),'obras.csv','text/csv');}
+function exportGeoJSON(){if(obras.length===0){alert('Sem obras');return;}const ids=new Set();const features=[];for(const o of obras){if(ids.has(o.id)){alert('IDs duplicados: '+o.id);return;}ids.add(o.id);const props={id:String(o.id),lote:o.lote||'',rodovia:o.rodovia||'',programa:o.programa||'',item:o.item!==''?Number(o.item)||null:null,subitem:o.subitem!==''?Number(o.subitem)||null:null,detalhamento_servico:o.detalhamento_servico||'',unidade:o.unidade||'',quantidade:o.quantidade!==''?Number(o.quantidade)||null:null,km_inicial:o.km_inicial!==''?Number(o.km_inicial)||null:null,km_final:o.km_final!==''?Number(o.km_final)||null:null,local:o.local?String(o.local).split(';').map(s=>s.trim()).filter(Boolean):[],data_inicial:o.data_inicial||null,data_final:o.data_final||null,observacoes_gerais:o.observacoes_gerais?o.observacoes_gerais:null};features.push({type:'Feature',geometry:o.geometry,properties:props});}const geo={type:'FeatureCollection',crs:{type:'name',properties:{name:'urn:ogc:def:crs:EPSG::4674'}},metadata:{schema_version:'R0',data_geracao:new Date().toISOString()},features};baixar(JSON.stringify(geo,null,2),'obras.geojson','application/geo+json');}
+function baixar(conteudo,nome,tipo){const blob=new Blob([conteudo],{type:tipo});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);} 
+// Import
+const fileImport = document.getElementById('fileImport');fileImport.addEventListener('change',e=>{const f=e.target.files[0];if(!f) return;const reader=new FileReader();reader.onload=function(ev){try{const geo=JSON.parse(ev.target.result);if(!geo.features||!Array.isArray(geo.features)){alert('Arquivo inválido');return;}drawnItems.clearLayers();obras.length=0;geo.features.forEach(feat=>{const geom=feat.geometry;let layer=null;if(geom.type==='Point'){layer=L.marker([geom.coordinates[1],geom.coordinates[0]]);}else if(geom.type==='LineString'){layer=L.polyline(geom.coordinates.map(c=>[c[1],c[0]]));}else if(geom.type==='Polygon'){layer=L.polygon(geom.coordinates[0].map(c=>[c[1],c[0]]));}else if(geom.type==='MultiPoint'){const fg=new L.FeatureGroup();geom.coordinates.forEach(c=>{fg.addLayer(L.marker([c[1],c[0]]));});layer=fg;}if(layer){drawnItems.addLayer(layer);const id=feat.properties&&feat.properties.id?String(feat.properties.id):ensureUniqueId();const entry=baseEntry(id,layer,geom,getRepresentativePoint(layer));entry.id=id;entry.lote=feat.properties?.lote||'';entry.rodovia=feat.properties?.rodovia||'';entry.programa=feat.properties?.programa||'';entry.item=feat.properties?.item!=null?String(feat.properties.item):'';entry.subitem=feat.properties?.subitem!=null?String(feat.properties.subitem):'';entry.detalhamento_servico=feat.properties?.detalhamento_servico||'';entry.unidade=feat.properties?.unidade||'';entry.quantidade=feat.properties?.quantidade!=null?String(feat.properties.quantidade):'';entry.km_inicial=feat.properties?.km_inicial!=null?String(feat.properties.km_inicial):'';entry.km_final=feat.properties?.km_final!=null?String(feat.properties.km_final):'';entry.local=Array.isArray(feat.properties?.local)?feat.properties.local: (feat.properties?.local?String(feat.properties.local).split(';').map(s=>s.trim()):[]);entry.data_inicial=feat.properties?.data_inicial||'';entry.data_final=feat.properties?.data_final||'';entry.observacoes_gerais=feat.properties?.observacoes_gerais||null;entry.wkt=geomWKT(geom);entry.geometry=geom;obras.push(entry);} });atualizarTabela();}catch(err){alert('Erro ao ler GeoJSON: '+err.message);} };reader.readAsText(f);});
+</script>
+</body>
+</html>
