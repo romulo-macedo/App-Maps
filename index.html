@@ -7,26 +7,62 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <style>
-body{margin:0;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;height:100vh}
+body{margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;height:100vh;background-color:#fdfdfd}
 #map{height:54vh}
-#controls{padding:8px;background:#fafafa;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center}
+#controls{padding:8px;background:#fafafa;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #tabela-container{height:42vh;overflow:auto}
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ccc;padding:6px;font-size:13px}
-input,select,textarea{width:100%;box-sizing:border-box;padding:4px}
-button{padding:6px 10px;cursor:pointer}
+table{width:100%;border-collapse:collapse;border-spacing:0}
+th,td{border-right:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0;padding:0;font-size:13px;vertical-align:top}
+th{padding:6px}
+th{background-color:#f7f7f7;text-align:left}
+tr:first-child th{border-top:1px solid #e0e0e0}
+th:first-child, td:first-child{border-left:1px solid #e0e0e0}
+td input, td textarea{border:none;outline:none;background:transparent;width:100%;height:100%;padding:6px;box-sizing:border-box;font-family:inherit;font-size:inherit}
+td input:focus, td textarea:focus{outline:2px solid #1d6ffc;outline-offset:-2px;background-color:rgba(232,240,254,0.4)}
+td textarea{resize:vertical;min-height:30px}
+input,select,textarea{box-sizing:border-box;padding:4px} /* Estilo geral, fora da tabela */
+#search-input{padding:6px;border-radius:5px;border:1px solid #ccc;width:250px}
+button{padding:6px 12px;cursor:pointer;border-radius:5px;border:1px solid #ccc;background-color:#f0f0f0;transition:background-color 0.2s}
+button:hover{background-color:#e6e6e6}
 .invalid{background:#ffe7e7}
+/* Estilos para o painel de edição flutuante */
+#edit-panel-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:none}
+#edit-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:600px;max-height:85vh;background:white;border-radius:8px;z-index:1001;display:none;flex-direction:column}
+#edit-panel-header{padding:10px 15px;font-weight:bold;border-bottom:1px solid #ccc;display:flex;justify-content:space-between;align-items:center}
+#edit-panel-content{padding:15px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#edit-panel-content label{display:flex;flex-direction:column;gap:4px}
+#edit-panel-footer{padding:10px 15px;border-top:1px solid #ccc;text-align:right;display:flex;gap:10px;justify-content:flex-end}
+.full-width{grid-column:1 / -1}
+.tr-selected{background-color:#d8eafc !important}
+/* Estilos para notificações (Toast) */
+#toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px}
+.toast{padding:12px 20px;border-radius:5px;color:white;opacity:0;transform:translateX(100%);transition:all 0.4s ease-in-out;font-size:14px}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast.info{background-color:#28a745}
+.toast.error{background-color:#dc3545}
+.toast.warning{background-color:#ffc107;color:#333}
+/* Estilos para o menu de contexto da tabela */
+.context-menu{position:fixed;z-index:10000;background:white;border:1px solid #ccc;box-shadow:2px 2px 5px rgba(0,0,0,0.15);border-radius:4px;padding:5px 0;display:none;font-size:14px}
+.context-menu-item{padding:8px 15px;cursor:pointer}
+.context-menu-item:hover{background-color:#f0f0f0}
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="controls">
   <button id="btn-settings">Configurações</button>
+  <button id="btn-add-row">Adicionar Linha</button>
+
+  <input id="fileImport" type="file" accept=".geojson,.json" style="display: none;">
+  <button onclick="document.getElementById('fileImport').click()">Importar GeoJSON</button>
+  <button id="btn-add-row">Adicionar Linha</button>
 
   <input id="fileImport" type="file" accept=".geojson,.json">
   <button id="btn-export-csv">Exportar CSV</button>
   <button id="btn-export-geojson">Exportar GeoJSON</button>
   <button id="btn-limpar">Limpar</button>
+  <button id="btn-salvar">Salvar</button>
+  <input type="text" id="search-input" placeholder="Buscar em todas as colunas...">
   <div style="margin-left:auto;font-size:13px">Desenhe POINT/LINESTRING/POLYGON ou importe um GeoJSON</div>
 </div>
 <div id="tabela-container">
@@ -43,10 +79,47 @@ button{padding:6px 10px;cursor:pointer}
 </div>
 <div id="settings-panel" style="display:none;padding:10px;background:#f0f0f0;border-top:1px solid #ccc;">
 <label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13"></label>
-<label>Fonte: <input type="text" id="cfg-font-family" value="Arial"></label>
-<label>Cor do texto: <input type="color" id="cfg-font-color" value="#000000"></label>
-<button id="cfg-apply">Aplicar</button>
 </div>
+
+<!-- Painel de Edição Flutuante -->
+<div id="edit-panel-overlay"></div>
+<div id="edit-panel">
+  <div id="edit-panel-header">
+    <span>Editar Obra</span>
+    <button id="edit-panel-close" style="padding: 2px 8px;">X</button>
+  </div>
+  <div id="edit-panel-content">
+    <label class="full-width">ID: <input type="text" name="id"></label>
+    <label>Lote: <input type="text" name="lote"></label>
+    <label>Rodovia: <input type="text" name="rodovia"></label>
+    <label>Programa: <input type="text" name="programa"></label>
+    <label>Item: <input type="text" name="item"></label>
+    <label>Subitem: <input type="text" name="subitem"></label>
+    <label>Unidade: <input type="text" name="unidade"></label>
+    <label>Quantidade: <input type="text" name="quantidade"></label>
+    <label>KM Inicial: <input type="text" name="km_inicial"></label>
+    <label>KM Final: <input type="text" name="km_final"></label>
+    <label>Local: <input type="text" name="local"></label>
+    <label class="full-width">Detalhamento do Serviço: <textarea name="detalhamento_servico" rows="2"></textarea></label>
+    <label>Data Inicial: <input type="date" name="data_inicial"></label>
+    <label>Data Final: <input type="date" name="data_final"></label>
+    <label class="full-width">Observações Gerais: <textarea name="observacoes_gerais" rows="3"></textarea></label>
+  </div>
+  <div id="edit-panel-footer">
+    <button id="edit-panel-cancel">Cancelar</button>
+    <button id="edit-panel-save" style="background-color:#28a745;color:white">Salvar Alterações</button>
+  </div>
+</div>
+
+<!-- Menu de Contexto para Cabeçalho da Tabela -->
+<div id="th-context-menu" class="context-menu">
+  <div class="context-menu-item" data-action="hide-column">Ocultar Coluna</div>
+  <div class="context-menu-item" data-action="show-all-columns">Mostrar Todas as Colunas</div>
+</div>
+
+<!-- Container para Notificações Toast -->
+<div id="toast-container"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <!-- Settings, theme and column-resize logic -->
@@ -56,7 +129,7 @@ button{padding:6px 10px;cursor:pointer}
   // build panel content with theme and presets
   panel.innerHTML = `
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13" min="10" max="30" style="width:70px"></label>
+      <label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13" min="10" max="30" style="width:70px"></label> 
       <label>Fonte: <input type="text" id="cfg-font-family" value="Arial" style="width:140px"></label>
       <label>Cor do texto: <input type="color" id="cfg-font-color" value="#000000"></label>
       <label>Tema: <select id="cfg-theme"><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
@@ -173,34 +246,525 @@ button{padding:6px 10px;cursor:pointer}
   // expose for debugging
   window.__collect_settings = { applySettings, resetSettings, makeColumnsResizable };
 })();
+
+// Vertical resizer logic
+(function(){
+  const controls = document.getElementById('controls');
+  const mapEl = document.getElementById('map');
+  const tableEl = document.getElementById('tabela-container');
+
+  controls.style.cursor = 'row-resize';
+
+  controls.addEventListener('mousedown', initResize);
+
+  function initResize(e) {
+    // Impede o redimensionamento se o clique foi em um botão ou input
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+      return;
+    }
+    e.preventDefault();
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+  function onMove(e) { const newMapHeight = e.clientY; mapEl.style.height = `${newMapHeight}px`; tableEl.style.height = `calc(100vh - ${newMapHeight}px - ${controls.offsetHeight}px - 4px)`; }
+  function onUp() { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
+})();
+
+// Lógica do Menu de Contexto da Tabela
+(function() {
+  const menu = document.getElementById('th-context-menu');
+  const theadRow = document.getElementById('thead-row');
+
+  theadRow.addEventListener('contextmenu', e => {
+    const th = e.target.closest('th');
+    if (!th) return;
+
+    e.preventDefault();
+    menu.style.top = `${e.clientY}px`;
+    menu.style.left = `${e.clientX}px`;
+    menu.style.display = 'block';
+    menu.dataset.columnIndex = th.cellIndex;
+  });
+
+  document.addEventListener('click', e => {
+    if (!menu.contains(e.target)) {
+      menu.style.display = 'none';
+    }
+  });
+
+  menu.addEventListener('click', e => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+
+    if (action === 'hide-column') {
+      const colIndex = parseInt(menu.dataset.columnIndex, 10);
+      if (!isNaN(colIndex)) {
+        toggleColumn(colIndex, false);
+      }
+    } else if (action === 'show-all-columns') {
+      const ths = document.querySelectorAll('#thead-row th');
+      for (let i = 0; i < ths.length; i++) {
+        toggleColumn(i, true);
+      }
+    }
+    menu.style.display = 'none';
+  });
+
+  function toggleColumn(index, show) {
+    const displayValue = show ? '' : 'none';
+    const th = document.querySelector(`#thead-row th:nth-child(${index + 1})`);
+    if (th) th.style.display = displayValue;
+
+    document.querySelectorAll(`#tbody-obras tr`).forEach(row => {
+      const td = row.querySelector(`td:nth-child(${index + 1})`);
+      if (td) td.style.display = displayValue;
+    });
+  }
+})();
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script>
 let obras = [];
-const map = L.map('map').setView([-23.55,-46.63],10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+let associatingObraId = null; // Guarda o ID da obra para associar geometria
+let highlightedLayer = null;
+const defaultStyle = {
+  color: '#3388ff',
+  weight: 3,
+};
+const highlightStyle = {
+  color: '#ff4500', // Laranja avermelhado
+  weight: 5,
+};
+
+// Definição das camadas de mapa base
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '© OpenStreetMap contributors'
+});
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+});
+
+const map = L.map('map', {
+  center: [-22.55,-47.63],
+  zoom: 10,
+  layers: [osmLayer] // Camada padrão
+});
+
 const drawnItems = new L.FeatureGroup().addTo(map);
+
 const drawControl = new L.Control.Draw({draw:{polyline:true,polygon:true,marker:true,rectangle:false,circle:false,circlemarker:false},edit:{featureGroup:drawnItems}});
 map.addControl(drawControl);
-map.on(L.Draw.Event.CREATED, function(e){const layer=e.layer;drawnItems.addLayer(layer);const geom=layerToGeometry(layer);const id=ensureUniqueId(e.layer.feature?.properties?.id);const latlng=getRepresentativePoint(layer);const entry=baseEntry(id,layer,geom,latlng);obras.push(entry);atualizarTabela();});
+map.on(L.Draw.Event.CREATED, function(e) {
+  const layer = e.layer;
+  drawnItems.addLayer(layer);
+  const geom = layerToGeometry(layer);
+
+  if (associatingObraId) {
+    // Se estiver no modo de associação
+    const obra = obras.find(o => o.id === associatingObraId);
+    if (obra) {
+      obra.layer = layer;
+      obra.geometry = geom;
+      obra.wkt = geomWKT(geom);
+    }
+    associatingObraId = null; // Sai do modo de associação
+  } else {
+    // Comportamento padrão: cria nova obra
+    const id = ensureUniqueId(e.layer.feature?.properties?.id);
+    const latlng = getRepresentativePoint(layer);
+    const entry = baseEntry(id, layer, geom, latlng);
+    obras.push(entry);
+  }
+  atualizarTabela();
+});
+map.on(L.Draw.Event.EDITED, function(e) {
+  e.layers.eachLayer(function(layer) {
+    // Encontra a obra correspondente à camada editada
+    const obra = obras.find(o => o.layer === layer);
+    if (obra) {
+      // Recalcula e atualiza a geometria e o WKT
+      const newGeom = layerToGeometry(layer);
+      obra.geometry = newGeom;
+      obra.wkt = geomWKT(newGeom);
+    }
+  });
+  atualizarTabela(); // Atualiza a tabela para refletir as novas coordenadas no campo WKT
+});
+
+// Adiciona o controle de camadas
+const baseMaps = {
+  "Mapa": osmLayer,
+  "Satélite": satelliteLayer
+};
+const overlayMaps = { "Desenhos": drawnItems };
+L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+
 function ensureUniqueId(pref){let base = pref || `obra-${Date.now()}`; let id = base; let i=1; while(obras.some(o=>o.id===id)){id = base+'-'+i; i++;} return id;}
 function baseEntry(id,layer,geom,rep){return {id, lote:'', rodovia:'', programa:'', item:'', subitem:'', detalhamento_servico:'', unidade:'', quantidade:'', km_inicial:'', km_final:'', local:[], data_inicial:'', data_final:'', observacoes_gerais:null, wkt:geomWKT(geom), geometry:geom, layer:layer, representative:rep};}
 function layerToGeometry(layer){ if(layer instanceof L.FeatureGroup){const pts=[]; layer.eachLayer(l=>{ if(l.getLatLng) { const c=l.getLatLng(); pts.push([Number(c.lng),Number(c.lat)]); }}); return {type:'MultiPoint', coordinates: pts}; } if(layer instanceof L.Marker || layer instanceof L.CircleMarker){const c=layer.getLatLng(); return {type:'Point', coordinates: [Number(c.lng), Number(c.lat)]}; } if(layer instanceof L.Polygon){const rings = layer.getLatLngs(); return {type:'Polygon', coordinates: rings.map(r=>r.map(p=>[Number(p.lng),Number(p.lat)]))}; } if(layer instanceof L.Polyline){const latlngs = layer.getLatLngs(); return {type:'LineString', coordinates: latlngs.map(p=>[Number(p.lng),Number(p.lat)])}; } return null; }
 function getRepresentativePoint(layer){ if(layer instanceof L.Marker || layer instanceof L.CircleMarker) return layer.getLatLng(); if(layer.getBounds) return layer.getBounds().getCenter(); if(layer.getLatLngs) return L.latLngBounds(layer.getLatLngs()).getCenter(); return map.getCenter(); }
 function geomWKT(geom){ if(!geom) return ''; if(geom.type==='Point') return `POINT(${geom.coordinates[0]} ${geom.coordinates[1]})`; if(geom.type==='LineString') return `LINESTRING(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; if(geom.type==='Polygon') return `POLYGON(${geom.coordinates.map(r=>'('+r.map(c=>c.join(' ')).join(', ')+')').join(',')})`; if(geom.type==='MultiPoint') return `MULTIPOINT(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; return ''; }
-function atualizarTabela(){const tb=document.getElementById('tbody-obras');tb.innerHTML='';obras.forEach((o,idx)=>{const tr=document.createElement('tr');tr.innerHTML=`<td><input data-f="id" data-i="${idx}" value="${escapeHtml(o.id)}"></td><td><input data-f="lote" data-i="${idx}" value="${escapeHtml(o.lote)}"></td><td><input data-f="rodovia" data-i="${idx}" value="${escapeHtml(o.rodovia)}"></td><td><input data-f="programa" data-i="${idx}" value="${escapeHtml(o.programa)}"></td><td><input data-f="item" data-i="${idx}" value="${escapeHtml(o.item)}"></td><td><input data-f="subitem" data-i="${idx}" value="${escapeHtml(o.subitem)}"></td><td><input data-f="detalhamento_servico" data-i="${idx}" value="${escapeHtml(o.detalhamento_servico)}"></td><td><input data-f="unidade" data-i="${idx}" value="${escapeHtml(o.unidade)}"></td><td><input data-f="quantidade" data-i="${idx}" value="${escapeHtml(o.quantidade)}"></td><td><input data-f="km_inicial" data-i="${idx}" value="${escapeHtml(o.km_inicial)}"></td><td><input data-f="km_final" data-i="${idx}" value="${escapeHtml(o.km_final)}"></td><td><input data-f="local" data-i="${idx}" placeholder="PISTA_NORTE;PISTA_SUL" value="${Array.isArray(o.local)?escapeHtml(o.local.join(';')):escapeHtml(o.local)}"></td><td><input type="date" data-f="data_inicial" data-i="${idx}" value="${o.data_inicial||''}"></td><td><input type="date" data-f="data_final" data-i="${idx}" value="${o.data_final||''}"></td><td><input data-f="observacoes_gerais" data-i="${idx}" value="${o.observacoes_gerais||''}"></td><td><textarea data-f="wkt" data-i="${idx}" readonly>${escapeHtml(o.wkt)}</textarea></td><td><button data-del="${idx}">Excluir</button></td>`;tb.appendChild(tr);});}
+function atualizarTabela(){const tb=document.getElementById('tbody-obras');tb.innerHTML='';obras.sort((a,b)=>String(a.id).localeCompare(String(b.id))).forEach(o=>{const tr=document.createElement('tr');tr.dataset.obraId=o.id;const actionsHtml=o.layer?`<button data-edit-id="${o.id}">Editar</button><button data-del-id="${o.id}">Excluir</button>`:`<button data-assoc-id="${o.id}">Associar</button><button data-del-id="${o.id}">Excluir</button>`;tr.innerHTML=`<td><input data-f="id" value="${escapeHtml(o.id)}"></td><td><input data-f="lote" value="${escapeHtml(o.lote)}"></td><td><input data-f="rodovia" value="${escapeHtml(o.rodovia)}"></td><td><input data-f="programa" value="${escapeHtml(o.programa)}"></td><td><input data-f="item" value="${escapeHtml(o.item)}"></td><td><input data-f="subitem" value="${escapeHtml(o.subitem)}"></td><td><input data-f="detalhamento_servico" value="${escapeHtml(o.detalhamento_servico)}"></td><td><input data-f="unidade" value="${escapeHtml(o.unidade)}"></td><td><input data-f="quantidade" value="${escapeHtml(o.quantidade)}"></td><td><input data-f="km_inicial" value="${escapeHtml(o.km_inicial)}"></td><td><input data-f="km_final" value="${escapeHtml(o.km_final)}"></td><td><input data-f="local" placeholder="PISTA_NORTE;PISTA_SUL" value="${Array.isArray(o.local)?escapeHtml(o.local.join(';')):escapeHtml(o.local)}"></td><td><input type="date" data-f="data_inicial" value="${o.data_inicial||''}"></td><td><input type="date" data-f="data_final" value="${o.data_final||''}"></td><td><input data-f="observacoes_gerais" value="${o.observacoes_gerais||''}"></td><td><textarea data-f="wkt">${escapeHtml(o.wkt)}</textarea></td><td><div style="display:flex;gap:4px;">${actionsHtml}</div></td>`;tb.appendChild(tr);});}
 function escapeHtml(s){if(s===null||s===undefined) return '';return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-document.getElementById('tbody-obras').addEventListener('input',e=>{const f=e.target.dataset.f;const i=Number(e.target.dataset.i);if(!f||Number.isNaN(i)||!obras[i]) return;let val=e.target.value; if(f==='local') val=val.replace(/\s/g,''); if(['quantidade','km_inicial','km_final'].includes(f)) val=val.replace(/,/g,'.'); if(f==='observacoes_gerais'&&val==='') val=null; obras[i][f]=val; if(f==='lote') validateLote(e.target); if(['quantidade','km_inicial','km_final'].includes(f)) validateDecimal(e.target); if(['data_inicial','data_final'].includes(f)) validateDate(e.target);});
+document.getElementById('tbody-obras').addEventListener('input',e=>{const f=e.target.dataset.f;const tr=e.target.closest('tr');if(!f||!tr) return;const obraId=tr.dataset.obraId;const obra=obras.find(o=>o.id===obraId);if(!obra) return;let val=e.target.value;if(f==='local') val=val.replace(/\s/g,'');if(['quantidade','km_inicial','km_final'].includes(f)) val=val.replace(/,/g,'.');if(f==='observacoes_gerais'&&val==='') val=null;obra[f]=val;if(f==='lote') validateLote(e.target);if(['quantidade','km_inicial','km_final'].includes(f)) validateDecimal(e.target);if(['data_inicial','data_final'].includes(f)) validateDate(e.target);});
 function validateLote(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^L\d{2}$/.test(v));}
-function validateDecimal(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d+(\.\d+)?$/.test(v));}
+function validateDecimal(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d*[,.]?\d*$/.test(v));}
 function validateDate(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(v));}
-document.getElementById('tbody-obras').addEventListener('click',e=>{const del=e.target.dataset.del;if(del===undefined) return;const idx=Number(del);if(Number.isNaN(idx)||!obras[idx]) return;const layer=obras[idx].layer;if(layer){ if(layer instanceof L.FeatureGroup){drawnItems.removeLayer(layer);} else drawnItems.removeLayer(layer);} obras.splice(idx,1);atualizarTabela();});
-function exportCSV(){if(obras.length===0){alert('Sem obras');return;}const campos=['id','lote','rodovia','programa','item','subitem','detalhamento_servico','unidade','quantidade','km_inicial','km_final','local','data_inicial','data_final','observacoes_gerais','wkt'];const linhas=[campos.join(',')];const ids=new Set();for(const o of obras){if(ids.has(o.id)){alert('IDs duplicados: '+o.id);return;}ids.add(o.id);const vals=campos.map(c=>{let v=o[c];if(v===null||v===undefined) v='';if(Array.isArray(v)) v=v.join(';');return `"${String(v).replace(/"/g,'""')}"`;});linhas.push(vals.join(','));}baixar(linhas.join('\n'),'obras.csv','text/csv');}
-function exportGeoJSON(){if(obras.length===0){alert('Sem obras');return;}const ids=new Set();const features=[];for(const o of obras){if(ids.has(o.id)){alert('IDs duplicados: '+o.id);return;}ids.add(o.id);const props={id:String(o.id),lote:o.lote||'',rodovia:o.rodovia||'',programa:o.programa||'',item:o.item!==''?Number(o.item)||null:null,subitem:o.subitem!==''?Number(o.subitem)||null:null,detalhamento_servico:o.detalhamento_servico||'',unidade:o.unidade||'',quantidade:o.quantidade!==''?Number(o.quantidade)||null:null,km_inicial:o.km_inicial!==''?Number(o.km_inicial)||null:null,km_final:o.km_final!==''?Number(o.km_final)||null:null,local:o.local?String(o.local).split(';').map(s=>s.trim()).filter(Boolean):[],data_inicial:o.data_inicial||null,data_final:o.data_final||null,observacoes_gerais:o.observacoes_gerais?o.observacoes_gerais:null};features.push({type:'Feature',geometry:o.geometry,properties:props});}const geo={type:'FeatureCollection',crs:{type:'name',properties:{name:'urn:ogc:def:crs:EPSG::4674'}},metadata:{schema_version:'R0',data_geracao:new Date().toISOString()},features};baixar(JSON.stringify(geo,null,2),'obras.geojson','application/geo+json');}
+
+// Adiciona os listeners para os botões de ação
+document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+document.getElementById('btn-export-geojson').addEventListener('click', exportGeoJSON);
+document.getElementById('btn-limpar').addEventListener('click', () => {
+  if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+    obras.length = 0;
+    drawnItems.clearLayers();
+    atualizarTabela();
+  }
+});
+document.getElementById('btn-salvar').addEventListener('click', saveData);
+document.getElementById('btn-add-row').addEventListener('click', () => {
+  const id = ensureUniqueId();
+  // Cria uma entrada base sem geometria (layer, geom, e rep são nulos)
+  const entry = baseEntry(id, null, null, null);
+  obras.push(entry);
+  atualizarTabela();
+  document.querySelector(`#tabela-container tr[data-obra-id="${id}"] input`)?.focus();
+});
+
+document.getElementById('search-input').addEventListener('input', e => {
+  const searchTerm = e.target.value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#tbody-obras tr');
+
+  // Limpa o destaque se estiver filtrando
+  if (highlightedLayer && highlightedLayer.setStyle) {
+    highlightedLayer.setStyle(defaultStyle);
+  }
+  highlightedLayer = null;
+
+  rows.forEach(row => {
+    const obraId = row.dataset.obraId;
+    const obra = obras.find(o => o.id === obraId);
+    if (!obra) return;
+
+    const isVisible = searchTerm === '' || Object.values(obra).some(val => 
+      String(val).toLowerCase().includes(searchTerm)
+    );
+
+    row.style.display = isVisible ? '' : 'none';
+
+    // Filtra também as camadas no mapa
+    if (obra.layer) {
+      if (isVisible) {
+        if (!drawnItems.hasLayer(obra.layer)) {
+          drawnItems.addLayer(obra.layer);
+        }
+      } else {
+        if (drawnItems.hasLayer(obra.layer)) {
+          drawnItems.removeLayer(obra.layer);
+        }
+      }
+    }
+  });
+});
+
+document.getElementById('tbody-obras').addEventListener('paste', e => {
+  e.preventDefault();
+  const target = e.target;
+  if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA')) return;
+
+  const startRowTr = target.closest('tr');
+  if (!startRowTr) return;
+  const startRowIndex = Array.from(startRowTr.parentElement.children).indexOf(startRowTr);
+  const startField = target.dataset.f;
+  const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+  const rows = clipboardData.split(/\r\n|\n|\r/).map(row => row.split('\t'));
+
+  const orderedFields = Array.from(document.querySelectorAll('#thead-row th')).map(th => th.textContent).slice(0, -2); // Ignora wkt e Ações
+  const startCol = orderedFields.indexOf(startField);
+
+  if (startCol === -1) return;
+
+  rows.forEach((cols, r_idx) => {
+    const currentRow = startRowIndex + r_idx;
+    if (currentRow >= obras.length) return;
+
+    cols.forEach((cellValue, c_idx) => {
+      const currentCol = startCol + c_idx;
+      if (currentCol >= orderedFields.length) return;
+
+      const fieldName = orderedFields[currentCol];
+      const obraId = document.querySelector(`#tbody-obras tr:nth-child(${currentRow + 1})`).dataset.obraId;
+      const obra = obras.find(o => o.id === obraId);
+      if (obra) obra[fieldName] = cellValue;
+    });
+  });
+  atualizarTabela();
+});
+
+document.getElementById('tbody-obras').addEventListener('click', e => {
+  const button = e.target.closest('button');
+  if (button) {
+    // Lógica para botões de editar/excluir
+    const delId = button.dataset.delId;
+    if (delId) {
+      const obraIndex = obras.findIndex(o => o.id === delId);
+      if (obraIndex === -1) return;
+      const layer = obras[obraIndex].layer;
+      if (layer) { drawnItems.removeLayer(layer); }
+      obras.splice(obraIndex, 1);
+      atualizarTabela();
+      return;
+    }
+    const editId = button.dataset.editId;
+    if (editId) {
+      const obraIndex = obras.findIndex(o => o.id === editId);
+      if (obraIndex !== -1) openEditPanel(obraIndex);
+    }
+    const assocId = button.dataset.assocId;
+    if (assocId) {
+      associatingObraId = assocId;
+      showToast('Modo de associação ativado. Desenhe no mapa para vincular a geometria.', 'info');
+    }
+    return;
+  }
+
+  // Lógica para centralizar no mapa
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const obraId = tr.dataset.obraId;
+  const obra = obras.find(o => o.id === obraId);
+  if (obra && obra.layer) {
+    // Remove o destaque da linha e da camada anterior
+    if (highlightedLayer) {
+      if (highlightedLayer.setStyle) {
+        highlightedLayer.setStyle(defaultStyle);
+      }
+    }
+    document.querySelectorAll('#tbody-obras tr').forEach(r => r.classList.remove('tr-selected'));
+
+    // Adiciona destaque à nova linha e camada
+    tr.classList.add('tr-selected');
+    highlightedLayer = obra.layer;
+    if (highlightedLayer.setStyle) {
+      highlightedLayer.setStyle(highlightStyle);
+    }
+
+    // Centraliza o mapa
+    if (obra.layer.getBounds) { map.fitBounds(obra.layer.getBounds()); }
+    else if (obra.layer.getLatLng) { map.setView(obra.layer.getLatLng(), 16); }
+  }
+});
+
+document.getElementById('tbody-obras').addEventListener('mouseover', e => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const obraId = tr.dataset.obraId;
+  const obra = obras.find(o => o.id === obraId);
+  if (obra && obra.layer && obra.layer !== highlightedLayer) {
+    if (obra.layer.setStyle) obra.layer.setStyle(highlightStyle);
+  }
+});
+
+document.getElementById('tbody-obras').addEventListener('mouseout', e => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  const obraId = tr.dataset.obraId;
+  const obra = obras.find(o => o.id === obraId);
+  if (obra && obra.layer && obra.layer !== highlightedLayer) {
+    if (obra.layer.setStyle) obra.layer.setStyle(defaultStyle);
+  }
+});
+
+function exportCSV(){if(obras.length===0){showToast('Nenhuma obra para exportar.','warning');return;}const campos=['id','lote','rodovia','programa','item','subitem','detalhamento_servico','unidade','quantidade','km_inicial','km_final','local','data_inicial','data_final','observacoes_gerais','wkt'];const linhas=[campos.join(',')];const ids=new Set();for(const o of obras){if(ids.has(o.id)){showToast(`ID duplicado encontrado: ${o.id}. A exportação foi cancelada.`,'error');return;}ids.add(o.id);const vals=campos.map(c=>{let v=o[c];if(v===null||v===undefined) v='';if(Array.isArray(v)) v=v.join(';');return `"${String(v).replace(/"/g,'""')}"`;});linhas.push(vals.join(','));}baixar(linhas.join('\n'),'obras.csv','text/csv');}
+
+function generateGeoJSONObject() {
+  const ids = new Set();
+  const features = [];
+  for (const o of obras) {
+    if (ids.has(o.id)) {
+      showToast(`ID duplicado encontrado: ${o.id}. A exportação foi cancelada.`, 'error');
+      return null; // Retorna nulo para indicar erro
+    }
+    ids.add(o.id);
+    const props = { id: String(o.id), lote: o.lote || '', rodovia: o.rodovia || '', programa: o.programa || '', item: o.item !== '' ? Number(o.item) || null : null, subitem: o.subitem !== '' ? Number(o.subitem) || null : null, detalhamento_servico: o.detalhamento_servico || '', unidade: o.unidade || '', quantidade: o.quantidade !== '' ? Number(o.quantidade) || null : null, km_inicial: o.km_inicial !== '' ? Number(o.km_inicial) || null : null, km_final: o.km_final !== '' ? Number(o.km_final) || null : null, local: o.local ? String(o.local).split(';').map(s => s.trim()).filter(Boolean) : [], data_inicial: o.data_inicial || null, data_final: o.data_final || null, observacoes_gerais: o.observacoes_gerais ? o.observacoes_gerais : null };
+    features.push({ type: 'Feature', geometry: o.geometry, properties: props });
+  }
+  return { type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::4674' } }, metadata: { schema_version: 'R0', data_geracao: new Date().toISOString() }, features };
+}
+
+function exportGeoJSON() {
+  if (obras.length === 0) { showToast('Nenhuma obra para exportar.', 'warning'); return; }
+  const geo = generateGeoJSONObject();
+  if (geo) {
+    baixar(JSON.stringify(geo, null, 2), 'obras.geojson', 'application/geo+json');
+  }
+}
+
 function baixar(conteudo,nome,tipo){const blob=new Blob([conteudo],{type:tipo});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);} 
 // Import
-const fileImport = document.getElementById('fileImport');fileImport.addEventListener('change',e=>{const f=e.target.files[0];if(!f) return;const reader=new FileReader();reader.onload=function(ev){try{const geo=JSON.parse(ev.target.result);if(!geo.features||!Array.isArray(geo.features)){alert('Arquivo inválido');return;}drawnItems.clearLayers();obras.length=0;geo.features.forEach(feat=>{const geom=feat.geometry;let layer=null;if(geom.type==='Point'){layer=L.marker([geom.coordinates[1],geom.coordinates[0]]);}else if(geom.type==='LineString'){layer=L.polyline(geom.coordinates.map(c=>[c[1],c[0]]));}else if(geom.type==='Polygon'){layer=L.polygon(geom.coordinates[0].map(c=>[c[1],c[0]]));}else if(geom.type==='MultiPoint'){const fg=new L.FeatureGroup();geom.coordinates.forEach(c=>{fg.addLayer(L.marker([c[1],c[0]]));});layer=fg;}if(layer){drawnItems.addLayer(layer);const id=feat.properties&&feat.properties.id?String(feat.properties.id):ensureUniqueId();const entry=baseEntry(id,layer,geom,getRepresentativePoint(layer));entry.id=id;entry.lote=feat.properties?.lote||'';entry.rodovia=feat.properties?.rodovia||'';entry.programa=feat.properties?.programa||'';entry.item=feat.properties?.item!=null?String(feat.properties.item):'';entry.subitem=feat.properties?.subitem!=null?String(feat.properties.subitem):'';entry.detalhamento_servico=feat.properties?.detalhamento_servico||'';entry.unidade=feat.properties?.unidade||'';entry.quantidade=feat.properties?.quantidade!=null?String(feat.properties.quantidade):'';entry.km_inicial=feat.properties?.km_inicial!=null?String(feat.properties.km_inicial):'';entry.km_final=feat.properties?.km_final!=null?String(feat.properties.km_final):'';entry.local=Array.isArray(feat.properties?.local)?feat.properties.local: (feat.properties?.local?String(feat.properties.local).split(';').map(s=>s.trim()):[]);entry.data_inicial=feat.properties?.data_inicial||'';entry.data_final=feat.properties?.data_final||'';entry.observacoes_gerais=feat.properties?.observacoes_gerais||null;entry.wkt=geomWKT(geom);entry.geometry=geom;obras.push(entry);} });atualizarTabela();}catch(err){alert('Erro ao ler GeoJSON: '+err.message);} };reader.readAsText(f);});
+const fileImport = document.getElementById('fileImport');
+fileImport.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const geo = JSON.parse(ev.target.result);
+      processGeoJSON(geo);
+    } catch (err) {
+      showToast('Erro ao ler o arquivo GeoJSON: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(f);
+});
+
+function processGeoJSON(geo) {
+  if (!geo || !geo.features || !Array.isArray(geo.features)) {
+    showToast('Estrutura do GeoJSON inválida.', 'error');
+    return;
+  }
+  drawnItems.clearLayers();
+  // Adiciona todas as camadas de volta ao limpar a busca ou importar
+  obras.forEach(o => {
+    if (o.layer && !drawnItems.hasLayer(o.layer)) {
+      drawnItems.addLayer(o.layer);
+    }
+  });
+  obras.length = 0;
+  geo.features.forEach(feat => {
+    const geom = feat.geometry;
+    let layer = null;
+    if (geom.type === 'Point') {
+      layer = L.marker([geom.coordinates[1], geom.coordinates[0]]);
+    } else if (geom.type === 'LineString') {
+      layer = L.polyline(geom.coordinates.map(c => [c[1], c[0]]));
+    } else if (geom.type === 'Polygon') {
+      layer = L.polygon(geom.coordinates[0].map(c => [c[1], c[0]]));
+    } else if (geom.type === 'MultiPoint') {
+      const fg = new L.FeatureGroup();
+      geom.coordinates.forEach(c => { fg.addLayer(L.marker([c[1], c[0]])); });
+      layer = fg;
+    }
+    if (layer) {
+      drawnItems.addLayer(layer);
+      const id = feat.properties && feat.properties.id ? String(feat.properties.id) : ensureUniqueId();
+      const entry = baseEntry(id, layer, geom, getRepresentativePoint(layer));
+      Object.assign(entry, feat.properties); // Copia todas as propriedades
+      // Garante que os tipos de dados estejam corretos para a tabela
+      entry.item = entry.item != null ? String(entry.item) : '';
+      entry.subitem = entry.subitem != null ? String(entry.subitem) : '';
+      entry.quantidade = entry.quantidade != null ? String(entry.quantidade) : '';
+      entry.km_inicial = entry.km_inicial != null ? String(entry.km_inicial) : '';
+      entry.km_final = entry.km_final != null ? String(entry.km_final) : '';
+      entry.local = Array.isArray(entry.local) ? entry.local : (entry.local ? String(entry.local).split(';').map(s => s.trim()) : []);
+      entry.observacoes_gerais = entry.observacoes_gerais || null;
+      entry.wkt = geomWKT(geom);
+      obras.push(entry);
+    }
+  });
+  atualizarTabela();
+}
+
+function saveData() {
+  const geo = generateGeoJSONObject();
+  if (geo) {
+    try {
+      localStorage.setItem('obrasData', JSON.stringify(geo));
+      showToast('Dados salvos com sucesso!', 'info');
+    } catch (e) {
+      showToast('Erro ao salvar os dados. O armazenamento pode estar cheio.', 'error');
+    }
+  }
+}
+
+function loadData() {
+  const savedData = localStorage.getItem('obrasData');
+  if (savedData) {
+    try {
+      const geo = JSON.parse(savedData);
+      processGeoJSON(geo);
+      console.log('Dados carregados do armazenamento local.');
+    } catch (e) {
+      console.error('Erro ao carregar dados do localStorage:', e);
+      localStorage.removeItem('obrasData'); // Limpa dados corrompidos
+    }
+  }
+}
+
+// Carrega os dados salvos ao iniciar a aplicação
+loadData();
+
+// Lógica de Notificações (Toast)
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => toast.classList.add('show'), 10); // Adiciona a classe para animar a entrada
+
+  setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 5000); // Remove após 5 segundos
+}
+
+// Lógica do Painel de Edição
+(function() {
+  const overlay = document.getElementById('edit-panel-overlay');
+  const panel = document.getElementById('edit-panel');
+  const content = document.getElementById('edit-panel-content');
+  const btnClose = document.getElementById('edit-panel-close');
+  const btnCancel = document.getElementById('edit-panel-cancel');
+  const btnSave = document.getElementById('edit-panel-save');
+
+  let currentEditIndex = -1;
+
+  window.openEditPanel = function(index) {
+    if (index < 0 || index >= obras.length) return;
+    currentEditIndex = index;
+    const obra = obras[index];
+
+    // Popula o formulário
+    content.querySelectorAll('input, textarea').forEach(el => {
+      const fieldName = el.name;
+      if (obra.hasOwnProperty(fieldName)) {
+        let value = obra[fieldName];
+        if (Array.isArray(value)) {
+          value = value.join(';');
+        }
+        el.value = value === null || value === undefined ? '' : value;
+      }
+    });
+
+    overlay.style.display = 'block';
+    panel.style.display = 'flex';
+  }
+
+  function closeEditPanel() {
+    overlay.style.display = 'none';
+    panel.style.display = 'none';
+    currentEditIndex = -1;
+  }
+
+  btnSave.addEventListener('click', () => {
+    if (currentEditIndex === -1) return;
+    const obra = obras[currentEditIndex];
+    content.querySelectorAll('input, textarea').forEach(el => {
+      let value = el.value;
+      // Trata o campo 'local' para salvar como array
+      if (el.name === 'local') {
+        value = value.split(';').map(s => s.trim()).filter(Boolean);
+      }
+      obra[el.name] = value;
+    });
+    atualizarTabela();
+    closeEditPanel();
+  });
+
+  [overlay, btnClose, btnCancel].forEach(el => el.addEventListener('click', closeEditPanel));
+})();
 </script>
 </body>
 </html>
