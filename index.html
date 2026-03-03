@@ -1,770 +1,1735 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Coletor GeoJSON Obras - Leaflet (R0)</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GeoObras ARTESP — R1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 <style>
-body{margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;height:100vh;background-color:#fdfdfd}
-#map{height:54vh}
-#controls{padding:8px;background:#fafafa;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#tabela-container{height:42vh;overflow:auto}
-table{width:100%;border-collapse:collapse;border-spacing:0}
-th,td{border-right:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0;padding:0;font-size:13px;vertical-align:top}
-th{padding:6px}
-th{background-color:#f7f7f7;text-align:left}
-tr:first-child th{border-top:1px solid #e0e0e0}
-th:first-child, td:first-child{border-left:1px solid #e0e0e0}
-td input, td textarea{border:none;outline:none;background:transparent;width:100%;height:100%;padding:6px;box-sizing:border-box;font-family:inherit;font-size:inherit}
-td input:focus, td textarea:focus{outline:2px solid #1d6ffc;outline-offset:-2px;background-color:rgba(232,240,254,0.4)}
-td textarea{resize:vertical;min-height:30px}
-input,select,textarea{box-sizing:border-box;padding:4px} /* Estilo geral, fora da tabela */
-#search-input{padding:6px;border-radius:5px;border:1px solid #ccc;width:250px}
-button{padding:6px 12px;cursor:pointer;border-radius:5px;border:1px solid #ccc;background-color:#f0f0f0;transition:background-color 0.2s}
-button:hover{background-color:#e6e6e6}
-.invalid{background:#ffe7e7}
-/* Estilos para o painel de edição flutuante */
-#edit-panel-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:none}
-#edit-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:600px;max-height:85vh;background:white;border-radius:8px;z-index:1001;display:none;flex-direction:column}
-#edit-panel-header{padding:10px 15px;font-weight:bold;border-bottom:1px solid #ccc;display:flex;justify-content:space-between;align-items:center}
-#edit-panel-content{padding:15px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#edit-panel-content label{display:flex;flex-direction:column;gap:4px}
-#edit-panel-footer{padding:10px 15px;border-top:1px solid #ccc;text-align:right;display:flex;gap:10px;justify-content:flex-end}
-.full-width{grid-column:1 / -1}
-.tr-selected{background-color:#d8eafc !important}
-/* Estilos para notificações (Toast) */
-#toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px}
-.toast{padding:12px 20px;border-radius:5px;color:white;opacity:0;transform:translateX(100%);transition:all 0.4s ease-in-out;font-size:14px}
-.toast.show{opacity:1;transform:translateX(0)}
-.toast.info{background-color:#28a745}
-.toast.error{background-color:#dc3545}
-.toast.warning{background-color:#ffc107;color:#333}
-/* Estilos para o menu de contexto da tabela */
-.context-menu{position:fixed;z-index:10000;background:white;border:1px solid #ccc;box-shadow:2px 2px 5px rgba(0,0,0,0.15);border-radius:4px;padding:5px 0;display:none;font-size:14px}
-.context-menu-item{padding:8px 15px;cursor:pointer}
-.context-menu-item:hover{background-color:#f0f0f0}
+:root {
+  --sidebar-bg: #0d1b2a;
+  --sidebar-hover: #162436;
+  --sidebar-active: #1e3450;
+  --accent: #e8a020;
+  --accent-light: rgba(232,160,32,0.15);
+  --accent-dark: #c07010;
+  --bg: #eef1f6;
+  --card: #ffffff;
+  --border: #dde2ea;
+  --text: #1a2332;
+  --text-muted: #6b7a8d;
+  --text-light: #9aa5b4;
+  --danger: #e53e3e;
+  --success: #2da44e;
+  --warning: #e8a020;
+  --info: #3b82f6;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Sora', sans-serif;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --radius: 8px;
+  --radius-sm: 5px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 13px; }
+
+/* ── Layout ───────────────────────────────────── */
+#app { display: flex; height: 100vh; }
+
+/* ── Sidebar ──────────────────────────────────── */
+#sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+#sidebar-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+#sidebar-logo .logo-mark {
+  display: flex; align-items: center; gap: 10px;
+}
+#sidebar-logo .logo-icon {
+  width: 34px; height: 34px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: #fff;
+}
+#sidebar-logo .logo-text { line-height: 1.2; }
+#sidebar-logo .logo-title { font-weight: 700; font-size: 15px; color: #fff; letter-spacing: -0.3px; }
+#sidebar-logo .logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); font-family: var(--mono); letter-spacing: 0.5px; text-transform: uppercase; }
+
+#sidebar-nav { padding: 12px 10px; flex: 1; }
+.nav-section-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.25); letter-spacing: 1px; text-transform: uppercase; padding: 8px 8px 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 6px; cursor: pointer;
+  color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
+  transition: all 0.15s; margin-bottom: 1px; user-select: none;
+}
+.nav-item:hover { background: var(--sidebar-hover); color: rgba(255,255,255,0.85); }
+.nav-item.active { background: var(--sidebar-active); color: #fff; }
+.nav-item.active .nav-icon { color: var(--accent); }
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.8; }
+.nav-badge { margin-left: auto; background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 600; }
+
+#sidebar-footer { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,0.07); }
+#autosave-status { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.35); font-size: 11px; }
+#autosave-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; flex-shrink: 0; transition: background 0.3s; }
+#autosave-dot.saving { background: var(--accent); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── Main content ─────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── Topbar ───────────────────────────────────── */
+#topbar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 0 18px; height: 52px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; box-shadow: 0 1px 0 var(--border);
+}
+#topbar-title { font-size: 14px; font-weight: 600; color: var(--text); }
+#topbar-subtitle { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+#topbar-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+#undo-redo { display: flex; gap: 2px; }
+
+/* ── Buttons ──────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer;
+  background: var(--card); color: var(--text); transition: all 0.15s; line-height: 1;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg); border-color: #c0c8d4; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent-dark); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); border-color: #a05c0a; }
+.btn-danger { background: #fef2f2; border-color: #fca5a5; color: var(--danger); }
+.btn-danger:hover { background: #fee2e2; }
+.btn-success { background: #f0fdf4; border-color: #86efac; color: var(--success); }
+.btn-success:hover { background: #dcfce7; }
+.btn-icon { padding: 6px; min-width: 30px; justify-content: center; }
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── Views ────────────────────────────────────── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.view.active { display: flex; }
+
+/* ── Dashboard ────────────────────────────────── */
+#view-dashboard { overflow-y: auto; padding: 20px; gap: 16px; }
+.dash-header { margin-bottom: 4px; }
+.dash-header h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
+.dash-header p { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat-card {
+  background: var(--card); border-radius: var(--radius); padding: 16px 18px;
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--accent);
+}
+.stat-card.blue::before { background: var(--info); }
+.stat-card.green::before { background: var(--success); }
+.stat-card.red::before { background: var(--danger); }
+.stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); }
+.stat-value { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin: 4px 0 2px; font-family: var(--mono); color: var(--text); }
+.stat-sub { font-size: 11px; color: var(--text-muted); }
+
+.dash-section { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+.dash-section-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.dash-section-title { font-size: 13px; font-weight: 600; }
+.dash-section-body { padding: 16px 18px; }
+
+.dash-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { font-size: 11px; color: var(--text-muted); width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.bar-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s ease; }
+.bar-fill.blue { background: var(--info); }
+.bar-fill.green { background: var(--success); }
+.bar-count { font-size: 11px; font-family: var(--mono); font-weight: 500; color: var(--text); width: 24px; text-align: right; }
+
+.recent-table { width: 100%; border-collapse: collapse; }
+.recent-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.recent-table td { padding: 8px; font-size: 12px; border-bottom: 1px solid var(--bg); }
+.recent-table tr:last-child td { border-bottom: none; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+.tag-orange { background: rgba(232,160,32,0.15); color: var(--accent-dark); }
+.tag-blue { background: rgba(59,130,246,0.12); color: #2563eb; }
+.tag-green { background: rgba(45,164,78,0.12); color: #166534; }
+.tag-gray { background: var(--bg); color: var(--text-muted); }
+
+/* ── Editor view ──────────────────────────────── */
+#view-editor { flex-direction: column; }
+#editor-toolbar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 8px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+#editor-toolbar .separator { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+#search-input {
+  padding: 5px 10px 5px 32px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--sans); font-size: 12px; width: 220px; outline: none; background: var(--bg);
+  transition: all 0.15s;
+}
+#search-input:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px var(--accent-light); }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none; }
+
+#editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#map { height: 45vh; min-height: 120px; flex-shrink: 0; }
+#resize-handle {
+  height: 6px; background: var(--border); cursor: row-resize; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+#resize-handle:hover { background: var(--accent); }
+#resize-handle::before { content: ''; width: 32px; height: 2px; background: currentColor; border-radius: 2px; color: var(--text-muted); }
+
+#table-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+/* Filter row */
+#filter-row { background: #f8f9fb; border-bottom: 1px solid var(--border); display: flex; flex-shrink: 0; }
+.filter-cell { flex-shrink: 0; padding: 3px 4px; border-right: 1px solid var(--border); }
+.filter-cell:last-child { border-right: none; flex: 1; }
+.filter-input {
+  width: 100%; padding: 3px 6px; border: 1px solid transparent; border-radius: 4px;
+  font-size: 11px; font-family: var(--sans); background: transparent; outline: none;
+  color: var(--text); transition: all 0.15s;
+}
+.filter-input:focus { border-color: var(--accent); background: white; }
+.filter-input::placeholder { color: var(--text-light); }
+
+#table-scroll { overflow: auto; flex: 1; }
+
+/* Table */
+#obras-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+#obras-table th {
+  background: var(--card); color: var(--text-muted); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.4px; padding: 8px 10px;
+  border-bottom: 2px solid var(--border); border-right: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10; white-space: nowrap; user-select: none;
+  cursor: pointer; transition: background 0.12s;
+}
+#obras-table th:last-child { cursor: default; }
+#obras-table th:hover:not(:last-child) { background: var(--bg); color: var(--text); }
+#obras-table th .sort-icon { display: inline-block; margin-left: 4px; opacity: 0.3; font-size: 10px; }
+#obras-table th.sort-asc .sort-icon::after { content: '▲'; opacity: 1; }
+#obras-table th.sort-desc .sort-icon::after { content: '▼'; opacity: 1; }
+.th-resizer { display: inline-block; width: 5px; cursor: col-resize; position: absolute; right: 0; top: 0; bottom: 0; background: transparent; }
+
+#obras-table td {
+  border-bottom: 1px solid var(--border); border-right: 1px solid #f0f2f5;
+  padding: 0; vertical-align: middle;
+}
+#obras-table td:last-child { border-right: 1px solid var(--border); }
+#obras-table tbody tr:hover { background: #fafbfd; }
+#obras-table tbody tr.tr-selected { background: #eff6ff !important; }
+#obras-table tbody tr.tr-selected td { border-bottom-color: #bfdbfe; }
+
+.cell-input {
+  border: none; outline: none; background: transparent; width: 100%; padding: 6px 8px;
+  font-family: var(--sans); font-size: 12px; color: var(--text);
+  transition: background 0.12s;
+}
+.cell-input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: rgba(232,160,32,0.04); }
+.cell-input.invalid { background: #fef2f2 !important; color: var(--danger); }
+.cell-wkt { font-family: var(--mono); font-size: 10px; color: var(--text-muted); cursor: not-allowed; }
+.cell-actions { display: flex; gap: 4px; padding: 4px 8px; justify-content: center; }
+
+.no-geom-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600;
+  padding: 2px 6px; border-radius: 10px;
+}
+
+/* empty state */
+#empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; color: var(--text-muted); gap: 8px; }
+#empty-state svg { width: 32px; height: 32px; opacity: 0.3; }
+#empty-state p { font-size: 13px; }
+
+/* ── Config view ──────────────────────────────── */
+#view-config { overflow-y: auto; padding: 20px; gap: 16px; }
+.config-section { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+.config-section-title { font-size: 13px; font-weight: 600; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.config-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.config-row { display: flex; align-items: center; gap: 16px; }
+.config-label { font-size: 12px; color: var(--text-muted); font-weight: 500; min-width: 140px; }
+.config-input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--sans); font-size: 12px; outline: none; }
+.config-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.config-toggle { display: flex; align-items: center; gap: 8px; }
+.toggle-switch { position: relative; width: 36px; height: 20px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 20px; cursor: pointer; transition: 0.2s; }
+.toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* ── Context menu ─────────────────────────────── */
+#ctx-menu {
+  position: fixed; z-index: 9999; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 4px; display: none; min-width: 180px;
+}
+.ctx-item { padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+.ctx-item:hover { background: var(--bg); }
+.ctx-item.danger { color: var(--danger); }
+.ctx-divider { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* ── Edit modal ───────────────────────────────── */
+#modal-overlay {
+  position: fixed; inset: 0; background: rgba(13,27,42,0.55); z-index: 1000;
+  display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+}
+#modal-overlay.open { display: flex; }
+#modal {
+  background: var(--card); border-radius: 10px; box-shadow: var(--shadow-lg);
+  width: 94%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+#modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+#modal-header h3 { font-size: 15px; font-weight: 600; }
+#modal-body { padding: 20px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-group.full { grid-column: 1 / -1; }
+.field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+.field-input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--sans); font-size: 13px; outline: none; transition: all 0.15s;
+}
+.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+textarea.field-input { resize: vertical; min-height: 70px; }
+#modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Toast notifications ──────────────────────── */
+#toast-area { position: fixed; bottom: 20px; right: 20px; z-index: 9000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--text); color: white; border-radius: 8px;
+  padding: 11px 16px; font-size: 13px; box-shadow: var(--shadow-lg);
+  opacity: 0; transform: translateY(8px) scale(0.97);
+  transition: all 0.25s ease; pointer-events: auto; max-width: 340px;
+}
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+.toast.success { background: #1a4731; border-left: 3px solid var(--success); }
+.toast.error { background: #450a0a; border-left: 3px solid var(--danger); }
+.toast.warning { background: #451a03; border-left: 3px solid var(--warning); }
+.toast .toast-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ── Scrollbars ───────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b0bac7; }
+
+/* Leaflet override */
+.leaflet-control-layers { border: 1px solid var(--border) !important; box-shadow: var(--shadow) !important; border-radius: var(--radius) !important; }
+
+/* Highlight map icon */
+.leaflet-marker-selected { filter: hue-rotate(190deg) brightness(1.4); }
+
+/* Column widths */
+.col-id        { width: 100px; }
+.col-lote      { width: 70px; }
+.col-rodovia   { width: 85px; }
+.col-programa  { width: 100px; }
+.col-item      { width: 55px; }
+.col-subitem   { width: 65px; }
+.col-detalhe   { width: 180px; }
+.col-unidade   { width: 70px; }
+.col-qtd       { width: 80px; }
+.col-kmi       { width: 80px; }
+.col-kmf       { width: 80px; }
+.col-local     { width: 110px; }
+.col-di        { width: 110px; }
+.col-df        { width: 110px; }
+.col-obs       { width: 140px; }
+.col-wkt       { width: 160px; }
+.col-actions   { width: 100px; min-width: 90px; }
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div id="controls">
-  <button id="btn-settings">Configurações</button>
-  <button id="btn-add-row">Adicionar Linha</button>
+<div id="app">
 
-  <input id="fileImport" type="file" accept=".geojson,.json" style="display: none;">
-  <button onclick="document.getElementById('fileImport').click()">Importar GeoJSON</button>
-  <button id="btn-add-row">Adicionar Linha</button>
-
-  <input id="fileImport" type="file" accept=".geojson,.json">
-  <button id="btn-export-csv">Exportar CSV</button>
-  <button id="btn-export-geojson">Exportar GeoJSON</button>
-  <button id="btn-limpar">Limpar</button>
-  <button id="btn-salvar">Salvar</button>
-  <input type="text" id="search-input" placeholder="Buscar em todas as colunas...">
-  <div style="margin-left:auto;font-size:13px">Desenhe POINT/LINESTRING/POLYGON ou importe um GeoJSON</div>
-</div>
-<div id="tabela-container">
-<table>
-<thead>
-<tr id="thead-row">
-  <th>id</th><th>lote</th><th>rodovia</th><th>programa</th><th>item</th><th>subitem</th><th>detalhamento_servico</th>
-  <th>unidade</th><th>quantidade</th><th>km_inicial</th><th>km_final</th><th>local</th>
-  <th>data_inicial</th><th>data_final</th><th>observacoes_gerais</th><th>wkt</th><th>Ações</th>
-</tr>
-</thead>
-<tbody id="tbody-obras"></tbody>
-</table>
-</div>
-<div id="settings-panel" style="display:none;padding:10px;background:#f0f0f0;border-top:1px solid #ccc;">
-<label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13"></label>
-</div>
-
-<!-- Painel de Edição Flutuante -->
-<div id="edit-panel-overlay"></div>
-<div id="edit-panel">
-  <div id="edit-panel-header">
-    <span>Editar Obra</span>
-    <button id="edit-panel-close" style="padding: 2px 8px;">X</button>
-  </div>
-  <div id="edit-panel-content">
-    <label class="full-width">ID: <input type="text" name="id"></label>
-    <label>Lote: <input type="text" name="lote"></label>
-    <label>Rodovia: <input type="text" name="rodovia"></label>
-    <label>Programa: <input type="text" name="programa"></label>
-    <label>Item: <input type="text" name="item"></label>
-    <label>Subitem: <input type="text" name="subitem"></label>
-    <label>Unidade: <input type="text" name="unidade"></label>
-    <label>Quantidade: <input type="text" name="quantidade"></label>
-    <label>KM Inicial: <input type="text" name="km_inicial"></label>
-    <label>KM Final: <input type="text" name="km_final"></label>
-    <label>Local: <input type="text" name="local"></label>
-    <label class="full-width">Detalhamento do Serviço: <textarea name="detalhamento_servico" rows="2"></textarea></label>
-    <label>Data Inicial: <input type="date" name="data_inicial"></label>
-    <label>Data Final: <input type="date" name="data_final"></label>
-    <label class="full-width">Observações Gerais: <textarea name="observacoes_gerais" rows="3"></textarea></label>
-  </div>
-  <div id="edit-panel-footer">
-    <button id="edit-panel-cancel">Cancelar</button>
-    <button id="edit-panel-save" style="background-color:#28a745;color:white">Salvar Alterações</button>
-  </div>
-</div>
-
-<!-- Menu de Contexto para Cabeçalho da Tabela -->
-<div id="th-context-menu" class="context-menu">
-  <div class="context-menu-item" data-action="hide-column">Ocultar Coluna</div>
-  <div class="context-menu-item" data-action="show-all-columns">Mostrar Todas as Colunas</div>
-</div>
-
-<!-- Container para Notificações Toast -->
-<div id="toast-container"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- Settings, theme and column-resize logic -->
-<script>
-(function(){
-  const panel = document.getElementById('settings-panel');
-  // build panel content with theme and presets
-  panel.innerHTML = `
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <label>Tamanho do texto: <input type="number" id="cfg-font-size" value="13" min="10" max="30" style="width:70px"></label> 
-      <label>Fonte: <input type="text" id="cfg-font-family" value="Arial" style="width:140px"></label>
-      <label>Cor do texto: <input type="color" id="cfg-font-color" value="#000000"></label>
-      <label>Tema: <select id="cfg-theme"><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
-      <label>Presets: <select id="cfg-presets"><option value="default">Padrão</option><option value="compact">Compacto</option><option value="large">Grande</option><option value="contrast">Alto Contraste</option></select></label>
-      <button id="cfg-apply">Aplicar</button>
-      <button id="cfg-reset">Reset</button>
+<!-- ── Sidebar ────────────────────────────────── -->
+<aside id="sidebar">
+  <div id="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">G</div>
+      <div class="logo-text">
+        <div class="logo-title">GeoObras</div>
+        <div class="logo-sub">ARTESP · R1</div>
+      </div>
     </div>
-    <div style="margin-top:8px;font-size:12px;color:#666">Arraste o lado direito dos cabeçalhos da tabela para redimensionar colunas.</div>
-  `;
+  </div>
+  <nav id="sidebar-nav">
+    <div class="nav-section-label">Navegação</div>
+    <div class="nav-item active" data-view="dashboard">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5zm-10 3a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2z"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-view="editor">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      Editor de Obras
+      <span class="nav-badge" id="badge-obras">0</span>
+    </div>
+    <div class="nav-section-label" style="margin-top:8px">Sistema</div>
+    <div class="nav-item" data-view="config">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+      Configurações
+    </div>
+  </nav>
+  <div id="sidebar-footer">
+    <div id="autosave-status">
+      <div id="autosave-dot"></div>
+      <span id="autosave-text">Salvo</span>
+    </div>
+  </div>
+</aside>
 
-  // toggle panel
-  document.getElementById('btn-settings').addEventListener('click',()=>{
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  });
+<!-- ── Main ───────────────────────────────────── -->
+<div id="main">
+  <!-- Topbar -->
+  <div id="topbar">
+    <div>
+      <span id="topbar-title">Dashboard</span>
+      <span id="topbar-subtitle"></span>
+    </div>
+    <div id="topbar-actions">
+      <div id="undo-redo">
+        <button class="btn btn-icon" id="btn-undo" title="Desfazer (Ctrl+Z)" disabled>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6M3 10l6-6"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btn-redo" title="Refazer (Ctrl+Y)" disabled>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6M21 10l-6-6"/></svg>
+        </button>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border)"></div>
+      <input id="fileImport" type="file" accept=".geojson,.json" style="display:none">
+      <button class="btn" id="btn-import">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 12l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Importar GeoJSON
+      </button>
+      <button class="btn" id="btn-export-csv">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        CSV
+      </button>
+      <button class="btn btn-primary" id="btn-export-geojson">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Exportar GeoJSON
+      </button>
+      <button class="btn btn-success" id="btn-save">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
 
-  // apply and reset
-  document.getElementById('cfg-apply').addEventListener('click',applySettings);
-  document.getElementById('cfg-reset').addEventListener('click',resetSettings);
+  <!-- Dashboard View -->
+  <div class="view active" id="view-dashboard">
+    <div class="dash-header">
+      <h2>Painel de Controle</h2>
+      <p>Visão geral das obras cadastradas no sistema</p>
+    </div>
 
-  function applySettings(){
-    const size = document.getElementById('cfg-font-size').value + 'px';
-    const family = document.getElementById('cfg-font-family').value;
-    const color = document.getElementById('cfg-font-color').value;
-    const theme = document.getElementById('cfg-theme').value;
-    const preset = document.getElementById('cfg-presets').value;
+    <div class="stats-grid" id="dash-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total de Obras</div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-sub">registros ativos</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Com Geometria</div>
+        <div class="stat-value" id="stat-geom">0</div>
+        <div class="stat-sub">com shape no mapa</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Sem Geometria</div>
+        <div class="stat-value" id="stat-nogeom">0</div>
+        <div class="stat-sub">pendentes de mapeamento</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Lotes Distintos</div>
+        <div class="stat-value" id="stat-lotes">0</div>
+        <div class="stat-sub">lotes cadastrados</div>
+      </div>
+    </div>
 
-    const table = document.querySelector('table');
-    table.style.fontSize = size;
-    table.style.fontFamily = family;
-    table.style.color = color;
+    <div class="dash-grid-2">
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <span class="dash-section-title">Obras por Programa</span>
+        </div>
+        <div class="dash-section-body">
+          <div class="bar-chart" id="chart-programa"></div>
+        </div>
+      </div>
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <span class="dash-section-title">Obras por Lote</span>
+        </div>
+        <div class="dash-section-body">
+          <div class="bar-chart" id="chart-lote"></div>
+        </div>
+      </div>
+    </div>
 
-    document.querySelectorAll('th,td,input,textarea').forEach(el=>{
-      el.style.fontSize = size;
-      el.style.fontFamily = family;
-      el.style.color = color;
-    });
+    <div class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Últimas Obras Cadastradas</span>
+        <button class="btn" onclick="switchView('editor')">Ver todas →</button>
+      </div>
+      <div class="dash-section-body" style="padding:0">
+        <table class="recent-table" id="dash-recent-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Lote</th><th>Rodovia</th><th>Programa</th><th>Detalhamento</th><th>Status Geo</th>
+            </tr>
+          </thead>
+          <tbody id="dash-recent-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    applyTheme(theme);
-    applyPreset(preset);
-  }
+  <!-- Editor View -->
+  <div class="view" id="view-editor">
+    <div id="editor-toolbar">
+      <button class="btn btn-primary" id="btn-add-row">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Adicionar Linha
+      </button>
+      <div class="separator"></div>
+      <div class="search-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+        <input type="text" id="search-input" placeholder="Buscar em todas as colunas...">
+      </div>
+      <button class="btn" id="btn-filter-toggle" title="Filtros por coluna">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+        Filtros
+      </button>
+      <div class="separator"></div>
+      <button class="btn btn-danger" id="btn-clear">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Limpar Tudo
+      </button>
+      <div style="margin-left:auto;font-size:11px;color:var(--text-muted)" id="obras-count-label">0 obras</div>
+    </div>
 
-  function resetSettings(){
-    document.getElementById('cfg-font-size').value = 13;
-    document.getElementById('cfg-font-family').value = 'Arial';
-    document.getElementById('cfg-font-color').value = '#000000';
-    document.getElementById('cfg-theme').value = 'light';
-    document.getElementById('cfg-presets').value = 'default';
-    applySettings();
-  }
+    <div id="editor-body">
+      <div id="map"></div>
+      <div id="resize-handle"></div>
+      <div id="table-area">
+        <div id="filter-row" style="display:none"><!-- Populated by JS --></div>
+        <div id="table-scroll">
+          <table id="obras-table">
+            <colgroup>
+              <col class="col-id"><col class="col-lote"><col class="col-rodovia"><col class="col-programa">
+              <col class="col-item"><col class="col-subitem"><col class="col-detalhe">
+              <col class="col-unidade"><col class="col-qtd"><col class="col-kmi"><col class="col-kmf">
+              <col class="col-local"><col class="col-di"><col class="col-df">
+              <col class="col-obs"><col class="col-wkt"><col class="col-actions">
+            </colgroup>
+            <thead>
+              <tr id="thead-row">
+                <th data-f="id">id<span class="sort-icon"></span></th>
+                <th data-f="lote">lote<span class="sort-icon"></span></th>
+                <th data-f="rodovia">rodovia<span class="sort-icon"></span></th>
+                <th data-f="programa">programa<span class="sort-icon"></span></th>
+                <th data-f="item">item<span class="sort-icon"></span></th>
+                <th data-f="subitem">subitem<span class="sort-icon"></span></th>
+                <th data-f="detalhamento_servico">detalhamento<span class="sort-icon"></span></th>
+                <th data-f="unidade">unidade<span class="sort-icon"></span></th>
+                <th data-f="quantidade">qtd<span class="sort-icon"></span></th>
+                <th data-f="km_inicial">km ini<span class="sort-icon"></span></th>
+                <th data-f="km_final">km fim<span class="sort-icon"></span></th>
+                <th data-f="local">local<span class="sort-icon"></span></th>
+                <th data-f="data_inicial">dt ini<span class="sort-icon"></span></th>
+                <th data-f="data_final">dt fim<span class="sort-icon"></span></th>
+                <th data-f="observacoes_gerais">observações<span class="sort-icon"></span></th>
+                <th>wkt</th>
+                <th>ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-obras"></tbody>
+          </table>
+          <div id="empty-state" style="display:none">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            <p>Nenhuma obra cadastrada. Desenhe no mapa ou adicione uma linha.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  function applyTheme(t){
-    if(t==='dark'){
-      document.body.style.background = '#121212';
-      document.body.style.color = '#eee';
-      document.getElementById('controls').style.background = '#1e1e1e';
-      document.getElementById('controls').style.borderTop = '1px solid #333';
-      document.querySelectorAll('table, th, td, input, textarea, button').forEach(el=>{
-        el.style.background = el.tagName.toLowerCase()==='td' || el.tagName.toLowerCase()==='th' ? '#222' : '#2a2a2a';
-        el.style.color = '#eee';
-        if(el.tagName.toLowerCase()==='table') el.style.borderColor = '#333';
-      });
-      document.getElementById('map').style.filter = 'brightness(0.95)';
-    } else {
-      // light
-      document.body.style.background = '';
-      document.body.style.color = '';
-      document.getElementById('controls').style.background = '';
-      document.getElementById('controls').style.borderTop = '';
-      document.querySelectorAll('table, th, td, input, textarea, button').forEach(el=>{
-        el.style.background = '';
-        el.style.color = '';
-        if(el.tagName.toLowerCase()==='table') el.style.borderColor = '';
-      });
-      document.getElementById('map').style.filter = '';
-    }
-  }
+  <!-- Config View -->
+  <div class="view" id="view-config">
+    <div class="dash-header">
+      <h2>Configurações</h2>
+      <p>Personalize a aparência e o comportamento do sistema</p>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">Aparência da Tabela</div>
+      <div class="config-body">
+        <div class="config-row">
+          <span class="config-label">Tamanho do texto</span>
+          <input type="number" class="config-input" id="cfg-font-size" value="12" min="9" max="20" style="width:70px">
+          <span style="font-size:12px;color:var(--text-muted)">px</span>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Altura das linhas</span>
+          <select class="config-input" id="cfg-density">
+            <option value="compact">Compacto (24px)</option>
+            <option value="normal" selected>Normal (32px)</option>
+            <option value="comfortable">Confortável (42px)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">Auto-salvamento</div>
+      <div class="config-body">
+        <div class="config-row">
+          <span class="config-label">Auto-salvar ao editar</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfg-autosave" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Intervalo (segundos)</span>
+          <input type="number" class="config-input" id="cfg-autosave-interval" value="3" min="1" max="60" style="width:70px">
+        </div>
+        <div class="config-row">
+          <button class="btn btn-danger" id="cfg-clear-storage">Limpar dados salvos (localStorage)</button>
+        </div>
+      </div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">Validação ARTESP</div>
+      <div class="config-body">
+        <div class="config-row">
+          <span class="config-label">Validar campo Lote (L00)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfg-val-lote" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Exigir geometria na exportação</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfg-val-geom" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div style="margin-top:4px">
+          <button class="btn btn-primary" id="cfg-apply">Aplicar Configurações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- #main -->
 
-  function applyPreset(p){
-    const table = document.querySelector('table');
-    if(p==='compact'){
-      table.style.fontSize = '11px';
-      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding = '4px'; });
-    } else if(p==='large'){
-      table.style.fontSize = '16px';
-      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding = '10px'; });
-    } else if(p==='contrast'){
-      document.querySelectorAll('th,td').forEach(c=>{ c.style.background='#000'; c.style.color='#fff'; });
-    } else {
-      document.querySelectorAll('th,td').forEach(c=>{ c.style.padding='6px'; c.style.background=''; c.style.color=''; });
-    }
-    // re-enable column resizers after preset
-    setTimeout(makeColumnsResizable,50);
-  }
+</div><!-- #app -->
 
-  // add column resizers to header
-  function makeColumnsResizable(){
-    const ths = document.querySelectorAll('thead th');
-    ths.forEach(th=>{ if(th.querySelector('.col-resizer')) return; th.style.position='relative'; const resizer = document.createElement('div'); resizer.className='col-resizer'; resizer.style.position='absolute'; resizer.style.right='0'; resizer.style.top='0'; resizer.style.width='6px'; resizer.style.cursor='col-resize'; resizer.style.userSelect='none'; resizer.style.height='100%'; resizer.style.zIndex='10'; resizer.style.background='transparent'; th.appendChild(resizer);
-      resizer.addEventListener('mousedown', initResize.bind(null,th));
-    });
-  }
-  function initResize(th, e){
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = th.offsetWidth;
-    function onMove(ev){ const newWidth = startWidth + (ev.clientX - startX); if(newWidth>40) th.style.width = newWidth+'px'; }
-    function onUp(){ window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }
+<!-- Context menu -->
+<div id="ctx-menu">
+  <div class="ctx-item" data-action="edit">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+    Editar obra
+  </div>
+  <div class="ctx-item" data-action="assoc">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+    Associar geometria
+  </div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" data-action="hide-col">Ocultar esta coluna</div>
+  <div class="ctx-item" data-action="show-all">Mostrar todas as colunas</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" data-action="delete">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+    Excluir obra
+  </div>
+</div>
 
-  // initial setup
-  makeColumnsResizable();
-  // expose for debugging
-  window.__collect_settings = { applySettings, resetSettings, makeColumnsResizable };
-})();
+<!-- Edit modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-header">
+      <h3>Editar Obra</h3>
+      <button class="btn btn-icon" id="modal-close">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="modal-body">
+      <div class="field-group full">
+        <div class="field-label">ID</div>
+        <input class="field-input" name="id" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Lote</div>
+        <input class="field-input" name="lote" type="text" placeholder="ex: L01">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Rodovia</div>
+        <input class="field-input" name="rodovia" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Programa</div>
+        <input class="field-input" name="programa" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Item</div>
+        <input class="field-input" name="item" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Subitem</div>
+        <input class="field-input" name="subitem" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Unidade</div>
+        <input class="field-input" name="unidade" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Quantidade</div>
+        <input class="field-input" name="quantidade" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">KM Inicial</div>
+        <input class="field-input" name="km_inicial" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">KM Final</div>
+        <input class="field-input" name="km_final" type="text">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Local</div>
+        <input class="field-input" name="local" type="text" placeholder="PISTA_NORTE;PISTA_SUL">
+      </div>
+      <div class="field-group full">
+        <div class="field-label">Detalhamento do Serviço</div>
+        <textarea class="field-input" name="detalhamento_servico" rows="2"></textarea>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Data Inicial</div>
+        <input class="field-input" name="data_inicial" type="date">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Data Final</div>
+        <input class="field-input" name="data_final" type="date">
+      </div>
+      <div class="field-group full">
+        <div class="field-label">Observações Gerais</div>
+        <textarea class="field-input" name="observacoes_gerais" rows="3"></textarea>
+      </div>
+    </div>
+    <div id="modal-footer">
+      <button class="btn" id="modal-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="modal-save">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
 
-// Vertical resizer logic
-(function(){
-  const controls = document.getElementById('controls');
-  const mapEl = document.getElementById('map');
-  const tableEl = document.getElementById('tabela-container');
+<!-- Toasts -->
+<div id="toast-area"></div>
 
-  controls.style.cursor = 'row-resize';
-
-  controls.addEventListener('mousedown', initResize);
-
-  function initResize(e) {
-    // Impede o redimensionamento se o clique foi em um botão ou input
-    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
-      return;
-    }
-    e.preventDefault();
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }
-  function onMove(e) { const newMapHeight = e.clientY; mapEl.style.height = `${newMapHeight}px`; tableEl.style.height = `calc(100vh - ${newMapHeight}px - ${controls.offsetHeight}px - 4px)`; }
-  function onUp() { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
-})();
-
-// Lógica do Menu de Contexto da Tabela
-(function() {
-  const menu = document.getElementById('th-context-menu');
-  const theadRow = document.getElementById('thead-row');
-
-  theadRow.addEventListener('contextmenu', e => {
-    const th = e.target.closest('th');
-    if (!th) return;
-
-    e.preventDefault();
-    menu.style.top = `${e.clientY}px`;
-    menu.style.left = `${e.clientX}px`;
-    menu.style.display = 'block';
-    menu.dataset.columnIndex = th.cellIndex;
-  });
-
-  document.addEventListener('click', e => {
-    if (!menu.contains(e.target)) {
-      menu.style.display = 'none';
-    }
-  });
-
-  menu.addEventListener('click', e => {
-    const action = e.target.dataset.action;
-    if (!action) return;
-
-    if (action === 'hide-column') {
-      const colIndex = parseInt(menu.dataset.columnIndex, 10);
-      if (!isNaN(colIndex)) {
-        toggleColumn(colIndex, false);
-      }
-    } else if (action === 'show-all-columns') {
-      const ths = document.querySelectorAll('#thead-row th');
-      for (let i = 0; i < ths.length; i++) {
-        toggleColumn(i, true);
-      }
-    }
-    menu.style.display = 'none';
-  });
-
-  function toggleColumn(index, show) {
-    const displayValue = show ? '' : 'none';
-    const th = document.querySelector(`#thead-row th:nth-child(${index + 1})`);
-    if (th) th.style.display = displayValue;
-
-    document.querySelectorAll(`#tbody-obras tr`).forEach(row => {
-      const td = row.querySelector(`td:nth-child(${index + 1})`);
-      if (td) td.style.display = displayValue;
-    });
-  }
-})();
-</script>
-
+<!-- Leaflet + Draw -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
 <script>
+/* ═══════════════════════════════════════════════
+   CORE DATA & HISTORY
+═══════════════════════════════════════════════ */
 let obras = [];
-let associatingObraId = null; // Guarda o ID da obra para associar geometria
-let highlightedLayer = null;
-const defaultStyle = {
-  color: '#3388ff',
-  weight: 3,
-};
-const highlightStyle = {
-  color: '#ff4500', // Laranja avermelhado
-  weight: 5,
-};
+const FIELDS = ['id','lote','rodovia','programa','item','subitem','detalhamento_servico','unidade','quantidade','km_inicial','km_final','local','data_inicial','data_final','observacoes_gerais'];
+const ALL_FIELDS = [...FIELDS, 'wkt'];
 
-// Definição das camadas de mapa base
-const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap contributors'
-});
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-});
+// History
+const undoStack = [];
+const redoStack = [];
+const MAX_HISTORY = 60;
+let _suppressHistory = false;
 
-const map = L.map('map', {
-  center: [-22.55,-47.63],
-  zoom: 10,
-  layers: [osmLayer] // Camada padrão
-});
+function captureHistory() {
+  if (_suppressHistory) return;
+  const snap = obras.map(o => {
+    const {layer, ...rest} = o;
+    return JSON.parse(JSON.stringify(rest));
+  });
+  undoStack.push(snap);
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack.length = 0;
+  updateUndoRedoBtns();
+}
 
+function restoreSnapshot(snap) {
+  _suppressHistory = true;
+  drawnItems.clearLayers();
+  obras.length = 0;
+  snap.forEach(s => {
+    let layer = null;
+    if (s.geometry) {
+      layer = geometryToLayer(s.geometry);
+      if (layer) drawnItems.addLayer(layer);
+    }
+    obras.push({...s, layer});
+  });
+  renderTable();
+  updateDashboard();
+  scheduleSave();
+  _suppressHistory = false;
+}
+
+function undo() {
+  if (undoStack.length < 2) return;
+  redoStack.push(undoStack.pop());
+  const snap = undoStack[undoStack.length - 1];
+  restoreSnapshot(snap);
+  updateUndoRedoBtns();
+  showToast('Ação desfeita', 'success');
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const snap = redoStack.pop();
+  undoStack.push(snap);
+  restoreSnapshot(snap);
+  updateUndoRedoBtns();
+  showToast('Ação refeita', 'success');
+}
+
+function updateUndoRedoBtns() {
+  document.getElementById('btn-undo').disabled = undoStack.length < 2;
+  document.getElementById('btn-redo').disabled = redoStack.length === 0;
+}
+
+/* ═══════════════════════════════════════════════
+   AUTO SAVE
+═══════════════════════════════════════════════ */
+let saveTimer = null;
+function scheduleSave() {
+  if (!document.getElementById('cfg-autosave').checked) return;
+  const dot = document.getElementById('autosave-dot');
+  const txt = document.getElementById('autosave-text');
+  dot.className = 'saving';
+  txt.textContent = 'Salvando...';
+  clearTimeout(saveTimer);
+  const interval = (parseInt(document.getElementById('cfg-autosave-interval').value) || 3) * 1000;
+  saveTimer = setTimeout(() => {
+    persistData();
+    dot.className = '';
+    txt.textContent = 'Salvo';
+  }, interval);
+}
+
+function persistData() {
+  try {
+    const geo = buildGeoJSON();
+    if (geo) localStorage.setItem('geoobras_r1_data', JSON.stringify(geo));
+  } catch(e) {
+    showToast('Erro ao salvar: armazenamento cheio?', 'error');
+  }
+}
+
+function loadPersistedData() {
+  const raw = localStorage.getItem('geoobras_r1_data');
+  if (!raw) return;
+  try {
+    const geo = JSON.parse(raw);
+    processGeoJSON(geo, true);
+  } catch(e) {
+    localStorage.removeItem('geoobras_r1_data');
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════════ */
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+const satLayer  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+
+const map = L.map('map', { center: [-22.55, -47.63], zoom: 10, layers: [osmLayer] });
 const drawnItems = new L.FeatureGroup().addTo(map);
-
-const drawControl = new L.Control.Draw({draw:{polyline:true,polygon:true,marker:true,rectangle:false,circle:false,circlemarker:false},edit:{featureGroup:drawnItems}});
+const drawControl = new L.Control.Draw({
+  draw: { polyline: true, polygon: true, marker: true, rectangle: false, circle: false, circlemarker: false },
+  edit: { featureGroup: drawnItems }
+});
 map.addControl(drawControl);
-map.on(L.Draw.Event.CREATED, function(e) {
+L.control.layers({ 'Mapa': osmLayer, 'Satélite': satLayer }, { 'Desenhos': drawnItems }).addTo(map);
+
+const styleDefault   = { color: '#3b82f6', weight: 2.5, opacity: 0.9, fillOpacity: 0.2 };
+const styleHighlight = { color: '#e8a020', weight: 4, opacity: 1, fillOpacity: 0.35 };
+let highlightedLayer = null;
+let associatingId = null;
+
+map.on(L.Draw.Event.CREATED, e => {
   const layer = e.layer;
   drawnItems.addLayer(layer);
   const geom = layerToGeometry(layer);
-
-  if (associatingObraId) {
-    // Se estiver no modo de associação
-    const obra = obras.find(o => o.id === associatingObraId);
+  if (associatingId) {
+    captureHistory();
+    const obra = obras.find(o => o.id === associatingId);
     if (obra) {
+      // remove old layer if present
+      if (obra.layer) drawnItems.removeLayer(obra.layer);
       obra.layer = layer;
       obra.geometry = geom;
-      obra.wkt = geomWKT(geom);
+      obra.wkt = geomToWKT(geom);
     }
-    associatingObraId = null; // Sai do modo de associação
+    associatingId = null;
+    showToast('Geometria associada com sucesso!', 'success');
   } else {
-    // Comportamento padrão: cria nova obra
-    const id = ensureUniqueId(e.layer.feature?.properties?.id);
-    const latlng = getRepresentativePoint(layer);
-    const entry = baseEntry(id, layer, geom, latlng);
-    obras.push(entry);
+    captureHistory();
+    const id = makeUniqueId();
+    obras.push(makeEntry(id, layer, geom));
   }
-  atualizarTabela();
+  renderTable();
+  updateDashboard();
+  scheduleSave();
 });
-map.on(L.Draw.Event.EDITED, function(e) {
-  e.layers.eachLayer(function(layer) {
-    // Encontra a obra correspondente à camada editada
+
+map.on(L.Draw.Event.EDITED, e => {
+  captureHistory();
+  e.layers.eachLayer(layer => {
     const obra = obras.find(o => o.layer === layer);
     if (obra) {
-      // Recalcula e atualiza a geometria e o WKT
-      const newGeom = layerToGeometry(layer);
-      obra.geometry = newGeom;
-      obra.wkt = geomWKT(newGeom);
+      obra.geometry = layerToGeometry(layer);
+      obra.wkt = geomToWKT(obra.geometry);
     }
   });
-  atualizarTabela(); // Atualiza a tabela para refletir as novas coordenadas no campo WKT
+  renderTable();
+  scheduleSave();
 });
 
-// Adiciona o controle de camadas
-const baseMaps = {
-  "Mapa": osmLayer,
-  "Satélite": satelliteLayer
-};
-const overlayMaps = { "Desenhos": drawnItems };
-L.control.layers(baseMaps, overlayMaps).addTo(map);
-
-
-function ensureUniqueId(pref){let base = pref || `obra-${Date.now()}`; let id = base; let i=1; while(obras.some(o=>o.id===id)){id = base+'-'+i; i++;} return id;}
-function baseEntry(id,layer,geom,rep){return {id, lote:'', rodovia:'', programa:'', item:'', subitem:'', detalhamento_servico:'', unidade:'', quantidade:'', km_inicial:'', km_final:'', local:[], data_inicial:'', data_final:'', observacoes_gerais:null, wkt:geomWKT(geom), geometry:geom, layer:layer, representative:rep};}
-function layerToGeometry(layer){ if(layer instanceof L.FeatureGroup){const pts=[]; layer.eachLayer(l=>{ if(l.getLatLng) { const c=l.getLatLng(); pts.push([Number(c.lng),Number(c.lat)]); }}); return {type:'MultiPoint', coordinates: pts}; } if(layer instanceof L.Marker || layer instanceof L.CircleMarker){const c=layer.getLatLng(); return {type:'Point', coordinates: [Number(c.lng), Number(c.lat)]}; } if(layer instanceof L.Polygon){const rings = layer.getLatLngs(); return {type:'Polygon', coordinates: rings.map(r=>r.map(p=>[Number(p.lng),Number(p.lat)]))}; } if(layer instanceof L.Polyline){const latlngs = layer.getLatLngs(); return {type:'LineString', coordinates: latlngs.map(p=>[Number(p.lng),Number(p.lat)])}; } return null; }
-function getRepresentativePoint(layer){ if(layer instanceof L.Marker || layer instanceof L.CircleMarker) return layer.getLatLng(); if(layer.getBounds) return layer.getBounds().getCenter(); if(layer.getLatLngs) return L.latLngBounds(layer.getLatLngs()).getCenter(); return map.getCenter(); }
-function geomWKT(geom){ if(!geom) return ''; if(geom.type==='Point') return `POINT(${geom.coordinates[0]} ${geom.coordinates[1]})`; if(geom.type==='LineString') return `LINESTRING(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; if(geom.type==='Polygon') return `POLYGON(${geom.coordinates.map(r=>'('+r.map(c=>c.join(' ')).join(', ')+')').join(',')})`; if(geom.type==='MultiPoint') return `MULTIPOINT(${geom.coordinates.map(c=>c.join(' ')).join(', ')})`; return ''; }
-function atualizarTabela(){const tb=document.getElementById('tbody-obras');tb.innerHTML='';obras.sort((a,b)=>String(a.id).localeCompare(String(b.id))).forEach(o=>{const tr=document.createElement('tr');tr.dataset.obraId=o.id;const actionsHtml=o.layer?`<button data-edit-id="${o.id}">Editar</button><button data-del-id="${o.id}">Excluir</button>`:`<button data-assoc-id="${o.id}">Associar</button><button data-del-id="${o.id}">Excluir</button>`;tr.innerHTML=`<td><input data-f="id" value="${escapeHtml(o.id)}"></td><td><input data-f="lote" value="${escapeHtml(o.lote)}"></td><td><input data-f="rodovia" value="${escapeHtml(o.rodovia)}"></td><td><input data-f="programa" value="${escapeHtml(o.programa)}"></td><td><input data-f="item" value="${escapeHtml(o.item)}"></td><td><input data-f="subitem" value="${escapeHtml(o.subitem)}"></td><td><input data-f="detalhamento_servico" value="${escapeHtml(o.detalhamento_servico)}"></td><td><input data-f="unidade" value="${escapeHtml(o.unidade)}"></td><td><input data-f="quantidade" value="${escapeHtml(o.quantidade)}"></td><td><input data-f="km_inicial" value="${escapeHtml(o.km_inicial)}"></td><td><input data-f="km_final" value="${escapeHtml(o.km_final)}"></td><td><input data-f="local" placeholder="PISTA_NORTE;PISTA_SUL" value="${Array.isArray(o.local)?escapeHtml(o.local.join(';')):escapeHtml(o.local)}"></td><td><input type="date" data-f="data_inicial" value="${o.data_inicial||''}"></td><td><input type="date" data-f="data_final" value="${o.data_final||''}"></td><td><input data-f="observacoes_gerais" value="${o.observacoes_gerais||''}"></td><td><textarea data-f="wkt">${escapeHtml(o.wkt)}</textarea></td><td><div style="display:flex;gap:4px;">${actionsHtml}</div></td>`;tb.appendChild(tr);});}
-function escapeHtml(s){if(s===null||s===undefined) return '';return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-document.getElementById('tbody-obras').addEventListener('input',e=>{const f=e.target.dataset.f;const tr=e.target.closest('tr');if(!f||!tr) return;const obraId=tr.dataset.obraId;const obra=obras.find(o=>o.id===obraId);if(!obra) return;let val=e.target.value;if(f==='local') val=val.replace(/\s/g,'');if(['quantidade','km_inicial','km_final'].includes(f)) val=val.replace(/,/g,'.');if(f==='observacoes_gerais'&&val==='') val=null;obra[f]=val;if(f==='lote') validateLote(e.target);if(['quantidade','km_inicial','km_final'].includes(f)) validateDecimal(e.target);if(['data_inicial','data_final'].includes(f)) validateDate(e.target);});
-function validateLote(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^L\d{2}$/.test(v));}
-function validateDecimal(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d*[,.]?\d*$/.test(v));}
-function validateDate(el){const v=el.value;el.classList.toggle('invalid',v!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(v));}
-
-// Adiciona os listeners para os botões de ação
-document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-document.getElementById('btn-export-geojson').addEventListener('click', exportGeoJSON);
-document.getElementById('btn-limpar').addEventListener('click', () => {
-  if (confirm('Tem certeza que deseja limpar todos os dados?')) {
-    obras.length = 0;
-    drawnItems.clearLayers();
-    atualizarTabela();
-  }
-});
-document.getElementById('btn-salvar').addEventListener('click', saveData);
-document.getElementById('btn-add-row').addEventListener('click', () => {
-  const id = ensureUniqueId();
-  // Cria uma entrada base sem geometria (layer, geom, e rep são nulos)
-  const entry = baseEntry(id, null, null, null);
-  obras.push(entry);
-  atualizarTabela();
-  document.querySelector(`#tabela-container tr[data-obra-id="${id}"] input`)?.focus();
-});
-
-document.getElementById('search-input').addEventListener('input', e => {
-  const searchTerm = e.target.value.toLowerCase().trim();
-  const rows = document.querySelectorAll('#tbody-obras tr');
-
-  // Limpa o destaque se estiver filtrando
-  if (highlightedLayer && highlightedLayer.setStyle) {
-    highlightedLayer.setStyle(defaultStyle);
-  }
-  highlightedLayer = null;
-
-  rows.forEach(row => {
-    const obraId = row.dataset.obraId;
-    const obra = obras.find(o => o.id === obraId);
-    if (!obra) return;
-
-    const isVisible = searchTerm === '' || Object.values(obra).some(val => 
-      String(val).toLowerCase().includes(searchTerm)
-    );
-
-    row.style.display = isVisible ? '' : 'none';
-
-    // Filtra também as camadas no mapa
-    if (obra.layer) {
-      if (isVisible) {
-        if (!drawnItems.hasLayer(obra.layer)) {
-          drawnItems.addLayer(obra.layer);
-        }
-      } else {
-        if (drawnItems.hasLayer(obra.layer)) {
-          drawnItems.removeLayer(obra.layer);
-        }
-      }
+map.on(L.Draw.Event.DELETED, e => {
+  captureHistory();
+  e.layers.eachLayer(layer => {
+    const obra = obras.find(o => o.layer === layer);
+    if (obra) {
+      obra.layer = null;
+      obra.geometry = null;
+      obra.wkt = '';
     }
   });
+  renderTable();
+  updateDashboard();
+  scheduleSave();
 });
 
-document.getElementById('tbody-obras').addEventListener('paste', e => {
-  e.preventDefault();
-  const target = e.target;
-  if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA')) return;
+/* ═══════════════════════════════════════════════
+   GEOMETRY HELPERS
+═══════════════════════════════════════════════ */
+function layerToGeometry(layer) {
+  if (layer instanceof L.Marker) {
+    const c = layer.getLatLng();
+    return { type: 'Point', coordinates: [+c.lng.toFixed(7), +c.lat.toFixed(7)] };
+  }
+  if (layer instanceof L.Polygon) {
+    const rings = layer.getLatLngs();
+    const toCoords = r => (Array.isArray(r[0]) ? r.map(toCoords) : r.map(p => [+p.lng.toFixed(7), +p.lat.toFixed(7)]));
+    return { type: 'Polygon', coordinates: [rings[0].map(p => [+p.lng.toFixed(7), +p.lat.toFixed(7)])] };
+  }
+  if (layer instanceof L.Polyline) {
+    const lls = layer.getLatLngs();
+    return { type: 'LineString', coordinates: lls.map(p => [+p.lng.toFixed(7), +p.lat.toFixed(7)]) };
+  }
+  return null;
+}
 
-  const startRowTr = target.closest('tr');
-  if (!startRowTr) return;
-  const startRowIndex = Array.from(startRowTr.parentElement.children).indexOf(startRowTr);
-  const startField = target.dataset.f;
-  const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
-  const rows = clipboardData.split(/\r\n|\n|\r/).map(row => row.split('\t'));
+function geometryToLayer(geom) {
+  if (!geom) return null;
+  try {
+    if (geom.type === 'Point') return L.marker([geom.coordinates[1], geom.coordinates[0]]);
+    if (geom.type === 'LineString') return L.polyline(geom.coordinates.map(c => [c[1], c[0]]), styleDefault);
+    if (geom.type === 'Polygon') return L.polygon(geom.coordinates[0].map(c => [c[1], c[0]]), styleDefault);
+    if (geom.type === 'MultiPoint') {
+      const fg = L.featureGroup();
+      geom.coordinates.forEach(c => fg.addLayer(L.marker([c[1], c[0]])));
+      return fg;
+    }
+  } catch(e) { return null; }
+  return null;
+}
 
-  const orderedFields = Array.from(document.querySelectorAll('#thead-row th')).map(th => th.textContent).slice(0, -2); // Ignora wkt e Ações
-  const startCol = orderedFields.indexOf(startField);
+function geomToWKT(geom) {
+  if (!geom) return '';
+  if (geom.type === 'Point') return `POINT(${geom.coordinates.join(' ')})`;
+  if (geom.type === 'LineString') return `LINESTRING(${geom.coordinates.map(c => c.join(' ')).join(', ')})`;
+  if (geom.type === 'Polygon') return `POLYGON(${geom.coordinates.map(r => '(' + r.map(c => c.join(' ')).join(', ') + ')').join(',')})`;
+  if (geom.type === 'MultiPoint') return `MULTIPOINT(${geom.coordinates.map(c => c.join(' ')).join(', ')})`;
+  return '';
+}
 
-  if (startCol === -1) return;
+function getRepresentativePoint(layer) {
+  if (!layer) return null;
+  if (layer.getLatLng) return layer.getLatLng();
+  if (layer.getBounds) return layer.getBounds().getCenter();
+  return map.getCenter();
+}
 
-  rows.forEach((cols, r_idx) => {
-    const currentRow = startRowIndex + r_idx;
-    if (currentRow >= obras.length) return;
+function makeUniqueId(pref) {
+  let base = pref || `obra-${Date.now()}`;
+  let id = base, i = 1;
+  while (obras.some(o => o.id === id)) { id = base + '-' + i; i++; }
+  return id;
+}
 
-    cols.forEach((cellValue, c_idx) => {
-      const currentCol = startCol + c_idx;
-      if (currentCol >= orderedFields.length) return;
+function makeEntry(id, layer, geom) {
+  return { id, lote: '', rodovia: '', programa: '', item: '', subitem: '', detalhamento_servico: '', unidade: '', quantidade: '', km_inicial: '', km_final: '', local: [], data_inicial: '', data_final: '', observacoes_gerais: null, wkt: geomToWKT(geom), geometry: geom || null, layer: layer || null };
+}
 
-      const fieldName = orderedFields[currentCol];
-      const obraId = document.querySelector(`#tbody-obras tr:nth-child(${currentRow + 1})`).dataset.obraId;
-      const obra = obras.find(o => o.id === obraId);
-      if (obra) obra[fieldName] = cellValue;
+/* ═══════════════════════════════════════════════
+   FILTERS & SORT STATE
+═══════════════════════════════════════════════ */
+let globalSearch = '';
+const columnFilters = {}; // field => string
+let sortField = null;
+let sortDir = 'asc';
+
+function matchesFilters(obra) {
+  if (globalSearch) {
+    const term = globalSearch.toLowerCase();
+    const matches = ALL_FIELDS.some(f => String(obra[f] ?? '').toLowerCase().includes(term));
+    if (!matches) return false;
+  }
+  for (const [f, v] of Object.entries(columnFilters)) {
+    if (!v) continue;
+    if (!String(obra[f] ?? '').toLowerCase().includes(v.toLowerCase())) return false;
+  }
+  return true;
+}
+
+function sortedObras() {
+  let arr = [...obras];
+  if (sortField) {
+    arr.sort((a, b) => {
+      const av = String(a[sortField] ?? '').toLowerCase();
+      const bv = String(b[sortField] ?? '').toLowerCase();
+      const num_a = parseFloat(av), num_b = parseFloat(bv);
+      const cmp = !isNaN(num_a) && !isNaN(num_b) ? num_a - num_b : av.localeCompare(bv);
+      return sortDir === 'asc' ? cmp : -cmp;
     });
+  }
+  return arr;
+}
+
+/* ═══════════════════════════════════════════════
+   TABLE RENDERING
+═══════════════════════════════════════════════ */
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody-obras');
+  const arr = sortedObras();
+  const visible = arr.filter(matchesFilters);
+
+  document.getElementById('obras-count-label').textContent = `${obras.length} obra${obras.length !== 1 ? 's' : ''}${visible.length !== obras.length ? ` (${visible.length} visíveis)` : ''}`;
+  document.getElementById('badge-obras').textContent = obras.length;
+
+  tbody.innerHTML = '';
+  if (!obras.length) {
+    document.getElementById('empty-state').style.display = 'flex';
+    return;
+  }
+  document.getElementById('empty-state').style.display = 'none';
+
+  // Sync map layers visibility
+  obras.forEach(o => {
+    if (!o.layer) return;
+    const vis = matchesFilters(o);
+    if (vis && !drawnItems.hasLayer(o.layer)) drawnItems.addLayer(o.layer);
+    if (!vis && drawnItems.hasLayer(o.layer)) drawnItems.removeLayer(o.layer);
   });
-  atualizarTabela();
+
+  visible.forEach(o => {
+    const localStr = Array.isArray(o.local) ? o.local.join(';') : (o.local || '');
+    const wktShort = (o.wkt || '').substring(0, 40) + ((o.wkt || '').length > 40 ? '…' : '');
+    const hasGeom = !!o.layer;
+    const tr = document.createElement('tr');
+    tr.dataset.obraId = o.id;
+    if (highlightedLayer && o.layer === highlightedLayer) tr.classList.add('tr-selected');
+
+    tr.innerHTML = `
+      <td><input class="cell-input" data-f="id" value="${esc(o.id)}"></td>
+      <td><input class="cell-input" data-f="lote" value="${esc(o.lote)}" placeholder="L01"></td>
+      <td><input class="cell-input" data-f="rodovia" value="${esc(o.rodovia)}"></td>
+      <td><input class="cell-input" data-f="programa" value="${esc(o.programa)}"></td>
+      <td><input class="cell-input" data-f="item" value="${esc(o.item)}"></td>
+      <td><input class="cell-input" data-f="subitem" value="${esc(o.subitem)}"></td>
+      <td><input class="cell-input" data-f="detalhamento_servico" value="${esc(o.detalhamento_servico)}"></td>
+      <td><input class="cell-input" data-f="unidade" value="${esc(o.unidade)}"></td>
+      <td><input class="cell-input" data-f="quantidade" value="${esc(o.quantidade)}"></td>
+      <td><input class="cell-input" data-f="km_inicial" value="${esc(o.km_inicial)}"></td>
+      <td><input class="cell-input" data-f="km_final" value="${esc(o.km_final)}"></td>
+      <td><input class="cell-input" data-f="local" value="${esc(localStr)}" placeholder="PISTA_NORTE"></td>
+      <td><input class="cell-input" data-f="data_inicial" type="date" value="${esc(o.data_inicial)}"></td>
+      <td><input class="cell-input" data-f="data_final" type="date" value="${esc(o.data_final)}"></td>
+      <td><input class="cell-input" data-f="observacoes_gerais" value="${esc(o.observacoes_gerais || '')}"></td>
+      <td><input class="cell-input cell-wkt" readonly value="${esc(wktShort)}" title="${esc(o.wkt)}" tabindex="-1"></td>
+      <td>
+        <div class="cell-actions">
+          ${hasGeom 
+            ? `<button class="btn btn-icon" data-edit-id="${esc(o.id)}" title="Editar"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>`
+            : `<span class="no-geom-badge" data-assoc-id="${esc(o.id)}" title="Clique para associar geometria" style="cursor:pointer">⚠ geo</span>`
+          }
+          <button class="btn btn-icon btn-danger" data-del-id="${esc(o.id)}" title="Excluir"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Apply font settings
+  applyCfg();
+}
+
+/* ═══════════════════════════════════════════════
+   FILTER ROW
+═══════════════════════════════════════════════ */
+function buildFilterRow() {
+  const filterRow = document.getElementById('filter-row');
+  const ths = document.querySelectorAll('#thead-row th');
+  filterRow.innerHTML = '';
+  ths.forEach((th, i) => {
+    const f = th.dataset.f;
+    const cell = document.createElement('div');
+    cell.className = 'filter-cell';
+    cell.style.width = th.offsetWidth + 'px';
+    if (f) {
+      const inp = document.createElement('input');
+      inp.className = 'filter-input';
+      inp.placeholder = '▾';
+      inp.dataset.f = f;
+      inp.value = columnFilters[f] || '';
+      inp.addEventListener('input', () => {
+        columnFilters[f] = inp.value;
+        renderTable();
+      });
+      cell.appendChild(inp);
+    }
+    filterRow.appendChild(cell);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TABLE EVENTS
+═══════════════════════════════════════════════ */
+const tbody = document.getElementById('tbody-obras');
+
+// Input change
+tbody.addEventListener('input', e => {
+  const inp = e.target;
+  if (!inp.classList.contains('cell-input') || inp.readOnly) return;
+  const f = inp.dataset.f;
+  const tr = inp.closest('tr');
+  if (!f || !tr) return;
+  const obra = obras.find(o => o.id === tr.dataset.obraId);
+  if (!obra) return;
+
+  let val = inp.value;
+  if (f === 'local') val = val.replace(/\s/g, '');
+  if (['quantidade','km_inicial','km_final'].includes(f)) val = val.replace(/,/g, '.');
+  if (f === 'observacoes_gerais' && val === '') val = null;
+  obra[f] = val;
+
+  // Validation
+  if (f === 'lote' && document.getElementById('cfg-val-lote').checked) {
+    inp.classList.toggle('invalid', val !== '' && !/^L\d{2}$/.test(val));
+  }
+  if (['quantidade','km_inicial','km_final'].includes(f)) {
+    inp.classList.toggle('invalid', val !== '' && !/^\d*\.?\d*$/.test(val));
+  }
+
+  scheduleSave();
 });
 
-document.getElementById('tbody-obras').addEventListener('click', e => {
-  const button = e.target.closest('button');
-  if (button) {
-    // Lógica para botões de editar/excluir
-    const delId = button.dataset.delId;
-    if (delId) {
-      const obraIndex = obras.findIndex(o => o.id === delId);
-      if (obraIndex === -1) return;
-      const layer = obras[obraIndex].layer;
-      if (layer) { drawnItems.removeLayer(layer); }
-      obras.splice(obraIndex, 1);
-      atualizarTabela();
+// Focus → capture history
+tbody.addEventListener('focus', e => {
+  if (e.target.classList.contains('cell-input') && !e.target.readOnly) {
+    captureHistory();
+  }
+}, true);
+
+// Clicks
+tbody.addEventListener('click', e => {
+  // Action buttons
+  const btn = e.target.closest('button');
+  const badge = e.target.closest('[data-assoc-id]');
+
+  if (btn) {
+    if (btn.dataset.delId) {
+      captureHistory();
+      const idx = obras.findIndex(o => o.id === btn.dataset.delId);
+      if (idx !== -1) {
+        if (obras[idx].layer) drawnItems.removeLayer(obras[idx].layer);
+        obras.splice(idx, 1);
+        renderTable();
+        updateDashboard();
+        scheduleSave();
+      }
       return;
     }
-    const editId = button.dataset.editId;
-    if (editId) {
-      const obraIndex = obras.findIndex(o => o.id === editId);
-      if (obraIndex !== -1) openEditPanel(obraIndex);
+    if (btn.dataset.editId) {
+      openModal(obras.findIndex(o => o.id === btn.dataset.editId));
+      return;
     }
-    const assocId = button.dataset.assocId;
-    if (assocId) {
-      associatingObraId = assocId;
-      showToast('Modo de associação ativado. Desenhe no mapa para vincular a geometria.', 'info');
-    }
+  }
+
+  if (badge && badge.dataset.assocId) {
+    associatingId = badge.dataset.assocId;
+    switchView('editor');
+    showToast('Modo de associação ativo. Desenhe no mapa para vincular.', 'success');
     return;
   }
 
-  // Lógica para centralizar no mapa
+  // Row click → highlight on map
   const tr = e.target.closest('tr');
   if (!tr) return;
-  const obraId = tr.dataset.obraId;
-  const obra = obras.find(o => o.id === obraId);
+  const obra = obras.find(o => o.id === tr.dataset.obraId);
   if (obra && obra.layer) {
-    // Remove o destaque da linha e da camada anterior
-    if (highlightedLayer) {
-      if (highlightedLayer.setStyle) {
-        highlightedLayer.setStyle(defaultStyle);
-      }
-    }
-    document.querySelectorAll('#tbody-obras tr').forEach(r => r.classList.remove('tr-selected'));
-
-    // Adiciona destaque à nova linha e camada
-    tr.classList.add('tr-selected');
-    highlightedLayer = obra.layer;
-    if (highlightedLayer.setStyle) {
-      highlightedLayer.setStyle(highlightStyle);
-    }
-
-    // Centraliza o mapa
-    if (obra.layer.getBounds) { map.fitBounds(obra.layer.getBounds()); }
-    else if (obra.layer.getLatLng) { map.setView(obra.layer.getLatLng(), 16); }
+    setHighlight(obra, tr);
   }
 });
 
-document.getElementById('tbody-obras').addEventListener('mouseover', e => {
+// Hover
+tbody.addEventListener('mouseover', e => {
   const tr = e.target.closest('tr');
   if (!tr) return;
-  const obraId = tr.dataset.obraId;
-  const obra = obras.find(o => o.id === obraId);
-  if (obra && obra.layer && obra.layer !== highlightedLayer) {
-    if (obra.layer.setStyle) obra.layer.setStyle(highlightStyle);
+  const obra = obras.find(o => o.id === tr.dataset.obraId);
+  if (obra && obra.layer && obra.layer !== highlightedLayer && obra.layer.setStyle) {
+    obra.layer.setStyle(styleHighlight);
   }
 });
-
-document.getElementById('tbody-obras').addEventListener('mouseout', e => {
+tbody.addEventListener('mouseout', e => {
   const tr = e.target.closest('tr');
   if (!tr) return;
-  const obraId = tr.dataset.obraId;
-  const obra = obras.find(o => o.id === obraId);
-  if (obra && obra.layer && obra.layer !== highlightedLayer) {
-    if (obra.layer.setStyle) obra.layer.setStyle(defaultStyle);
+  const obra = obras.find(o => o.id === tr.dataset.obraId);
+  if (obra && obra.layer && obra.layer !== highlightedLayer && obra.layer.setStyle) {
+    obra.layer.setStyle(styleDefault);
   }
 });
 
-function exportCSV(){if(obras.length===0){showToast('Nenhuma obra para exportar.','warning');return;}const campos=['id','lote','rodovia','programa','item','subitem','detalhamento_servico','unidade','quantidade','km_inicial','km_final','local','data_inicial','data_final','observacoes_gerais','wkt'];const linhas=[campos.join(',')];const ids=new Set();for(const o of obras){if(ids.has(o.id)){showToast(`ID duplicado encontrado: ${o.id}. A exportação foi cancelada.`,'error');return;}ids.add(o.id);const vals=campos.map(c=>{let v=o[c];if(v===null||v===undefined) v='';if(Array.isArray(v)) v=v.join(';');return `"${String(v).replace(/"/g,'""')}"`;});linhas.push(vals.join(','));}baixar(linhas.join('\n'),'obras.csv','text/csv');}
+function setHighlight(obra, tr) {
+  if (highlightedLayer && highlightedLayer.setStyle) highlightedLayer.setStyle(styleDefault);
+  document.querySelectorAll('#tbody-obras tr').forEach(r => r.classList.remove('tr-selected'));
+  highlightedLayer = obra.layer;
+  if (highlightedLayer && highlightedLayer.setStyle) highlightedLayer.setStyle(styleHighlight);
+  tr.classList.add('tr-selected');
+  if (obra.layer.getBounds) map.fitBounds(obra.layer.getBounds(), { padding: [30, 30] });
+  else if (obra.layer.getLatLng) map.setView(obra.layer.getLatLng(), 16);
+}
 
-function generateGeoJSONObject() {
+// Paste from Excel
+tbody.addEventListener('paste', e => {
+  const target = e.target;
+  if (!target.classList.contains('cell-input') || target.readOnly) return;
+  e.preventDefault();
+  captureHistory();
+  const startTr = target.closest('tr');
+  if (!startTr) return;
+  const trs = Array.from(tbody.querySelectorAll('tr'));
+  const startRowIdx = trs.indexOf(startTr);
+  const f = target.dataset.f;
+  const fieldOrder = FIELDS;
+  const startCol = fieldOrder.indexOf(f);
+  if (startCol === -1) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  const rows = text.split(/\r\n|\n|\r/).map(r => r.split('\t'));
+  rows.forEach((cols, ri) => {
+    const trIdx = startRowIdx + ri;
+    if (trIdx >= trs.length) return;
+    const obraId = trs[trIdx].dataset.obraId;
+    const obra = obras.find(o => o.id === obraId);
+    if (!obra) return;
+    cols.forEach((val, ci) => {
+      const col = startCol + ci;
+      if (col < fieldOrder.length) obra[fieldOrder[col]] = val;
+    });
+  });
+  renderTable();
+  scheduleSave();
+});
+
+// Sorting
+document.getElementById('thead-row').addEventListener('click', e => {
+  const th = e.target.closest('th[data-f]');
+  if (!th) return;
+  const f = th.dataset.f;
+  if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortField = f; sortDir = 'asc'; }
+  document.querySelectorAll('#thead-row th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+  th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  renderTable();
+});
+
+// Context menu (right-click on table)
+let ctxTargetObraId = null, ctxColIdx = null;
+const ctxMenu = document.getElementById('ctx-menu');
+
+document.getElementById('obras-table').addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const tr = e.target.closest('tr');
+  const th = e.target.closest('th');
+  ctxTargetObraId = tr ? tr.dataset.obraId : null;
+  ctxColIdx = th ? th.cellIndex : (e.target.closest('td') ? e.target.closest('td').cellIndex : null);
+  ctxMenu.style.top = e.clientY + 'px';
+  ctxMenu.style.left = e.clientX + 'px';
+  ctxMenu.style.display = 'block';
+});
+
+document.addEventListener('click', () => ctxMenu.style.display = 'none');
+
+ctxMenu.addEventListener('click', e => {
+  const action = e.target.closest('.ctx-item')?.dataset.action;
+  if (!action) return;
+  if (action === 'edit' && ctxTargetObraId) {
+    openModal(obras.findIndex(o => o.id === ctxTargetObraId));
+  } else if (action === 'assoc' && ctxTargetObraId) {
+    associatingId = ctxTargetObraId;
+    switchView('editor');
+    showToast('Modo de associação ativo. Desenhe no mapa.', 'success');
+  } else if (action === 'delete' && ctxTargetObraId) {
+    captureHistory();
+    const idx = obras.findIndex(o => o.id === ctxTargetObraId);
+    if (idx !== -1) {
+      if (obras[idx].layer) drawnItems.removeLayer(obras[idx].layer);
+      obras.splice(idx, 1);
+      renderTable();
+      updateDashboard();
+      scheduleSave();
+    }
+  } else if (action === 'hide-col' && ctxColIdx != null) {
+    toggleCol(ctxColIdx, false);
+  } else if (action === 'show-all') {
+    document.querySelectorAll('#thead-row th').forEach((_, i) => toggleCol(i, true));
+  }
+});
+
+function toggleCol(idx, show) {
+  const sel = `nth-child(${idx + 1})`;
+  document.querySelector(`#thead-row th:${sel}`).style.display = show ? '' : 'none';
+  tbody.querySelectorAll(`tr`).forEach(tr => {
+    const td = tr.querySelector(`td:${sel}`);
+    if (td) td.style.display = show ? '' : 'none';
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   MODAL EDIT
+═══════════════════════════════════════════════ */
+let modalIdx = -1;
+
+function openModal(idx) {
+  if (idx < 0 || idx >= obras.length) return;
+  modalIdx = idx;
+  const obra = obras[idx];
+  const body = document.getElementById('modal-body');
+  body.querySelectorAll('input,textarea').forEach(el => {
+    const v = obra[el.name];
+    el.value = Array.isArray(v) ? v.join(';') : (v == null ? '' : v);
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  if (modalIdx === -1) return;
+  captureHistory();
+  const obra = obras[modalIdx];
+  document.getElementById('modal-body').querySelectorAll('input,textarea').forEach(el => {
+    let v = el.value;
+    if (el.name === 'local') v = v.split(';').map(s => s.trim()).filter(Boolean);
+    if (el.name === 'observacoes_gerais' && v === '') v = null;
+    obra[el.name] = v;
+  });
+  renderTable();
+  updateDashboard();
+  scheduleSave();
+  closeModal();
+  showToast('Obra atualizada!', 'success');
+});
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalIdx = -1;
+}
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('modal-overlay')) closeModal(); });
+
+/* ═══════════════════════════════════════════════
+   GEOJSON IMPORT / EXPORT
+═══════════════════════════════════════════════ */
+function processGeoJSON(geo, silent) {
+  if (!geo?.features) { showToast('GeoJSON inválido', 'error'); return; }
+  _suppressHistory = true;
+  drawnItems.clearLayers();
+  obras.length = 0;
+  geo.features.forEach(feat => {
+    const geom = feat.geometry;
+    const layer = geom ? geometryToLayer(geom) : null;
+    if (layer) drawnItems.addLayer(layer);
+    const p = feat.properties || {};
+    const id = makeUniqueId(p.id ? String(p.id) : undefined);
+    const e = makeEntry(id, layer, geom);
+    Object.assign(e, p);
+    e.id = id;
+    ['item','subitem','quantidade','km_inicial','km_final'].forEach(f => {
+      e[f] = e[f] != null ? String(e[f]) : '';
+    });
+    e.local = Array.isArray(e.local) ? e.local : (e.local ? String(e.local).split(';').map(s => s.trim()) : []);
+    e.observacoes_gerais = e.observacoes_gerais || null;
+    e.wkt = geomToWKT(geom);
+    obras.push(e);
+  });
+  _suppressHistory = false;
+  captureHistory();
+  renderTable();
+  updateDashboard();
+  scheduleSave();
+  if (!silent) showToast(`${obras.length} obra(s) importada(s)!`, 'success');
+}
+
+function buildGeoJSON() {
   const ids = new Set();
   const features = [];
   for (const o of obras) {
-    if (ids.has(o.id)) {
-      showToast(`ID duplicado encontrado: ${o.id}. A exportação foi cancelada.`, 'error');
-      return null; // Retorna nulo para indicar erro
-    }
+    if (ids.has(o.id)) { showToast(`ID duplicado: ${o.id}. Exportação cancelada.`, 'error'); return null; }
     ids.add(o.id);
-    const props = { id: String(o.id), lote: o.lote || '', rodovia: o.rodovia || '', programa: o.programa || '', item: o.item !== '' ? Number(o.item) || null : null, subitem: o.subitem !== '' ? Number(o.subitem) || null : null, detalhamento_servico: o.detalhamento_servico || '', unidade: o.unidade || '', quantidade: o.quantidade !== '' ? Number(o.quantidade) || null : null, km_inicial: o.km_inicial !== '' ? Number(o.km_inicial) || null : null, km_final: o.km_final !== '' ? Number(o.km_final) || null : null, local: o.local ? String(o.local).split(';').map(s => s.trim()).filter(Boolean) : [], data_inicial: o.data_inicial || null, data_final: o.data_final || null, observacoes_gerais: o.observacoes_gerais ? o.observacoes_gerais : null };
-    features.push({ type: 'Feature', geometry: o.geometry, properties: props });
+    const props = {
+      id: String(o.id), lote: o.lote || '', rodovia: o.rodovia || '',
+      programa: o.programa || '',
+      item: o.item !== '' ? (Number(o.item) || null) : null,
+      subitem: o.subitem !== '' ? (Number(o.subitem) || null) : null,
+      detalhamento_servico: o.detalhamento_servico || '',
+      unidade: o.unidade || '',
+      quantidade: o.quantidade !== '' ? (Number(o.quantidade) || null) : null,
+      km_inicial: o.km_inicial !== '' ? (Number(o.km_inicial) || null) : null,
+      km_final: o.km_final !== '' ? (Number(o.km_final) || null) : null,
+      local: Array.isArray(o.local) ? o.local : (o.local ? String(o.local).split(';').map(s=>s.trim()).filter(Boolean) : []),
+      data_inicial: o.data_inicial || null, data_final: o.data_final || null,
+      observacoes_gerais: o.observacoes_gerais || null
+    };
+    features.push({ type: 'Feature', geometry: o.geometry || null, properties: props });
   }
-  return { type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::4674' } }, metadata: { schema_version: 'R0', data_geracao: new Date().toISOString() }, features };
+  return {
+    type: 'FeatureCollection',
+    crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::4674' } },
+    metadata: { schema_version: 'R1', data_geracao: new Date().toISOString() },
+    features
+  };
 }
 
-function exportGeoJSON() {
-  if (obras.length === 0) { showToast('Nenhuma obra para exportar.', 'warning'); return; }
-  const geo = generateGeoJSONObject();
-  if (geo) {
-    baixar(JSON.stringify(geo, null, 2), 'obras.geojson', 'application/geo+json');
-  }
+function downloadFile(content, name, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
 }
 
-function baixar(conteudo,nome,tipo){const blob=new Blob([conteudo],{type:tipo});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);} 
-// Import
-const fileImport = document.getElementById('fileImport');
-fileImport.addEventListener('change', e => {
+document.getElementById('btn-import').addEventListener('click', () => document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
   const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      const geo = JSON.parse(ev.target.result);
-      processGeoJSON(geo);
-    } catch (err) {
-      showToast('Erro ao ler o arquivo GeoJSON: ' + err.message, 'error');
-    }
+  reader.onload = ev => {
+    try { processGeoJSON(JSON.parse(ev.target.result)); }
+    catch(err) { showToast('Erro ao ler GeoJSON: ' + err.message, 'error'); }
+    e.target.value = '';
   };
   reader.readAsText(f);
 });
 
-function processGeoJSON(geo) {
-  if (!geo || !geo.features || !Array.isArray(geo.features)) {
-    showToast('Estrutura do GeoJSON inválida.', 'error');
-    return;
+document.getElementById('btn-export-geojson').addEventListener('click', () => {
+  if (!obras.length) { showToast('Nenhuma obra para exportar.', 'warning'); return; }
+  const reqGeom = document.getElementById('cfg-val-geom').checked;
+  if (reqGeom) {
+    const sem = obras.filter(o => !o.geometry);
+    if (sem.length) {
+      if (!confirm(`${sem.length} obra(s) sem geometria. Exportar assim mesmo?`)) return;
+    }
   }
-  drawnItems.clearLayers();
-  // Adiciona todas as camadas de volta ao limpar a busca ou importar
-  obras.forEach(o => {
-    if (o.layer && !drawnItems.hasLayer(o.layer)) {
-      drawnItems.addLayer(o.layer);
-    }
-  });
-  obras.length = 0;
-  geo.features.forEach(feat => {
-    const geom = feat.geometry;
-    let layer = null;
-    if (geom.type === 'Point') {
-      layer = L.marker([geom.coordinates[1], geom.coordinates[0]]);
-    } else if (geom.type === 'LineString') {
-      layer = L.polyline(geom.coordinates.map(c => [c[1], c[0]]));
-    } else if (geom.type === 'Polygon') {
-      layer = L.polygon(geom.coordinates[0].map(c => [c[1], c[0]]));
-    } else if (geom.type === 'MultiPoint') {
-      const fg = new L.FeatureGroup();
-      geom.coordinates.forEach(c => { fg.addLayer(L.marker([c[1], c[0]])); });
-      layer = fg;
-    }
-    if (layer) {
-      drawnItems.addLayer(layer);
-      const id = feat.properties && feat.properties.id ? String(feat.properties.id) : ensureUniqueId();
-      const entry = baseEntry(id, layer, geom, getRepresentativePoint(layer));
-      Object.assign(entry, feat.properties); // Copia todas as propriedades
-      // Garante que os tipos de dados estejam corretos para a tabela
-      entry.item = entry.item != null ? String(entry.item) : '';
-      entry.subitem = entry.subitem != null ? String(entry.subitem) : '';
-      entry.quantidade = entry.quantidade != null ? String(entry.quantidade) : '';
-      entry.km_inicial = entry.km_inicial != null ? String(entry.km_inicial) : '';
-      entry.km_final = entry.km_final != null ? String(entry.km_final) : '';
-      entry.local = Array.isArray(entry.local) ? entry.local : (entry.local ? String(entry.local).split(';').map(s => s.trim()) : []);
-      entry.observacoes_gerais = entry.observacoes_gerais || null;
-      entry.wkt = geomWKT(geom);
-      obras.push(entry);
-    }
-  });
-  atualizarTabela();
-}
-
-function saveData() {
-  const geo = generateGeoJSONObject();
+  const geo = buildGeoJSON();
   if (geo) {
-    try {
-      localStorage.setItem('obrasData', JSON.stringify(geo));
-      showToast('Dados salvos com sucesso!', 'info');
-    } catch (e) {
-      showToast('Erro ao salvar os dados. O armazenamento pode estar cheio.', 'error');
-    }
+    downloadFile(JSON.stringify(geo, null, 2), 'obras.geojson', 'application/geo+json');
+    showToast('GeoJSON exportado!', 'success');
   }
-}
+});
 
-function loadData() {
-  const savedData = localStorage.getItem('obrasData');
-  if (savedData) {
-    try {
-      const geo = JSON.parse(savedData);
-      processGeoJSON(geo);
-      console.log('Dados carregados do armazenamento local.');
-    } catch (e) {
-      console.error('Erro ao carregar dados do localStorage:', e);
-      localStorage.removeItem('obrasData'); // Limpa dados corrompidos
-    }
-  }
-}
-
-// Carrega os dados salvos ao iniciar a aplicação
-loadData();
-
-// Lógica de Notificações (Toast)
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => toast.classList.add('show'), 10); // Adiciona a classe para animar a entrada
-
-  setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 5000); // Remove após 5 segundos
-}
-
-// Lógica do Painel de Edição
-(function() {
-  const overlay = document.getElementById('edit-panel-overlay');
-  const panel = document.getElementById('edit-panel');
-  const content = document.getElementById('edit-panel-content');
-  const btnClose = document.getElementById('edit-panel-close');
-  const btnCancel = document.getElementById('edit-panel-cancel');
-  const btnSave = document.getElementById('edit-panel-save');
-
-  let currentEditIndex = -1;
-
-  window.openEditPanel = function(index) {
-    if (index < 0 || index >= obras.length) return;
-    currentEditIndex = index;
-    const obra = obras[index];
-
-    // Popula o formulário
-    content.querySelectorAll('input, textarea').forEach(el => {
-      const fieldName = el.name;
-      if (obra.hasOwnProperty(fieldName)) {
-        let value = obra[fieldName];
-        if (Array.isArray(value)) {
-          value = value.join(';');
-        }
-        el.value = value === null || value === undefined ? '' : value;
-      }
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  if (!obras.length) { showToast('Nenhuma obra para exportar.', 'warning'); return; }
+  const campos = [...FIELDS, 'wkt'];
+  const linhas = [campos.join(',')];
+  const ids = new Set();
+  for (const o of obras) {
+    if (ids.has(o.id)) { showToast(`ID duplicado: ${o.id}`, 'error'); return; }
+    ids.add(o.id);
+    const vals = campos.map(c => {
+      let v = o[c]; if (v == null) v = '';
+      if (Array.isArray(v)) v = v.join(';');
+      return `"${String(v).replace(/"/g, '""')}"`;
     });
-
-    overlay.style.display = 'block';
-    panel.style.display = 'flex';
+    linhas.push(vals.join(','));
   }
+  downloadFile(linhas.join('\n'), 'obras.csv', 'text/csv');
+  showToast('CSV exportado!', 'success');
+});
 
-  function closeEditPanel() {
-    overlay.style.display = 'none';
-    panel.style.display = 'none';
-    currentEditIndex = -1;
+document.getElementById('btn-save').addEventListener('click', () => {
+  persistData();
+  showToast('Dados salvos no navegador!', 'success');
+  document.getElementById('autosave-dot').className = '';
+  document.getElementById('autosave-text').textContent = 'Salvo';
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (!obras.length || confirm('Limpar todas as obras? Esta ação pode ser desfeita com Ctrl+Z.')) {
+    captureHistory();
+    obras.length = 0;
+    drawnItems.clearLayers();
+    renderTable();
+    updateDashboard();
+    scheduleSave();
   }
+});
 
-  btnSave.addEventListener('click', () => {
-    if (currentEditIndex === -1) return;
-    const obra = obras[currentEditIndex];
-    content.querySelectorAll('input, textarea').forEach(el => {
-      let value = el.value;
-      // Trata o campo 'local' para salvar como array
-      if (el.name === 'local') {
-        value = value.split(';').map(s => s.trim()).filter(Boolean);
-      }
-      obra[el.name] = value;
-    });
-    atualizarTabela();
-    closeEditPanel();
+document.getElementById('btn-add-row').addEventListener('click', () => {
+  captureHistory();
+  const id = makeUniqueId();
+  obras.push(makeEntry(id, null, null));
+  renderTable();
+  updateDashboard();
+  scheduleSave();
+  // Focus first input of new row
+  setTimeout(() => {
+    const last = tbody.lastElementChild;
+    if (last) last.querySelector('input')?.focus();
+  }, 50);
+});
+
+/* ═══════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════ */
+function updateDashboard() {
+  document.getElementById('stat-total').textContent = obras.length;
+  const withGeom = obras.filter(o => !!o.geometry).length;
+  document.getElementById('stat-geom').textContent = withGeom;
+  document.getElementById('stat-nogeom').textContent = obras.length - withGeom;
+  const lotes = new Set(obras.map(o => o.lote).filter(Boolean));
+  document.getElementById('stat-lotes').textContent = lotes.size;
+
+  // By program
+  renderBarChart('chart-programa', countBy('programa'));
+  // By lote
+  renderBarChart('chart-lote', countBy('lote'), 'blue');
+
+  // Recent table
+  const recent = [...obras].slice(-8).reverse();
+  const rb = document.getElementById('dash-recent-body');
+  rb.innerHTML = '';
+  recent.forEach(o => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding:8px;font-family:var(--mono);font-size:11px">${esc(o.id)}</td>
+      <td style="padding:8px"><span class="tag ${o.lote ? 'tag-orange' : 'tag-gray'}">${esc(o.lote || '—')}</span></td>
+      <td style="padding:8px;font-size:12px">${esc(o.rodovia || '—')}</td>
+      <td style="padding:8px"><span class="tag ${o.programa ? 'tag-blue' : 'tag-gray'}">${esc(o.programa || '—')}</span></td>
+      <td style="padding:8px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.detalhamento_servico || '—')}</td>
+      <td style="padding:8px"><span class="tag ${o.geometry ? 'tag-green' : 'tag-gray'}">${o.geometry ? '✓ OK' : '⚠ Pendente'}</span></td>
+    `;
+    rb.appendChild(tr);
   });
+  if (!recent.length) {
+    rb.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Nenhuma obra cadastrada</td></tr>`;
+  }
+}
 
-  [overlay, btnClose, btnCancel].forEach(el => el.addEventListener('click', closeEditPanel));
+function countBy(field) {
+  const counts = {};
+  obras.forEach(o => {
+    const k = o[field] || '(vazio)';
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+}
+
+function renderBarChart(id, data, cls = '') {
+  const el = document.getElementById(id);
+  if (!data.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px">Sem dados</p>'; return; }
+  const max = data[0][1];
+  el.innerHTML = data.map(([label, count]) => `
+    <div class="bar-row">
+      <span class="bar-label" title="${esc(label)}">${esc(label)}</span>
+      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.round((count/max)*100)}%"></div></div>
+      <span class="bar-count">${count}</span>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   VIEW SWITCHING
+═══════════════════════════════════════════════ */
+const viewTitles = { dashboard: 'Dashboard', editor: 'Editor de Obras', config: 'Configurações' };
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-view="${name}"]`).classList.add('active');
+  document.getElementById('topbar-title').textContent = viewTitles[name];
+  if (name === 'editor') {
+    setTimeout(() => map.invalidateSize(), 100);
+    buildFilterRow();
+  }
+  if (name === 'dashboard') updateDashboard();
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => switchView(item.dataset.view));
+});
+
+/* ═══════════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════════ */
+document.getElementById('search-input').addEventListener('input', e => {
+  globalSearch = e.target.value;
+  renderTable();
+});
+
+/* ═══════════════════════════════════════════════
+   FILTER TOGGLE
+═══════════════════════════════════════════════ */
+let filterVisible = false;
+document.getElementById('btn-filter-toggle').addEventListener('click', () => {
+  filterVisible = !filterVisible;
+  const fr = document.getElementById('filter-row');
+  fr.style.display = filterVisible ? 'flex' : 'none';
+  document.getElementById('btn-filter-toggle').style.background = filterVisible ? 'var(--accent-light)' : '';
+  document.getElementById('btn-filter-toggle').style.borderColor = filterVisible ? 'var(--accent)' : '';
+  if (filterVisible) buildFilterRow();
+});
+
+/* ═══════════════════════════════════════════════
+   RESIZE HANDLE (map vs table)
+═══════════════════════════════════════════════ */
+(function() {
+  const handle = document.getElementById('resize-handle');
+  const mapEl = document.getElementById('map');
+  const body = document.getElementById('editor-body');
+  let dragging = false;
+
+  handle.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const bodyRect = body.getBoundingClientRect();
+    const newH = Math.max(80, Math.min(e.clientY - bodyRect.top, body.clientHeight - 120));
+    mapEl.style.height = newH + 'px';
+    map.invalidateSize();
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
 })();
+
+/* ═══════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════ */
+function applyCfg() {
+  const size = document.getElementById('cfg-font-size').value + 'px';
+  const density = document.getElementById('cfg-density').value;
+  const heights = { compact: '24px', normal: '32px', comfortable: '42px' };
+  document.querySelectorAll('.cell-input').forEach(el => { el.style.fontSize = size; });
+  document.querySelectorAll('#tbody-obras tr').forEach(tr => { tr.style.height = heights[density] || '32px'; });
+}
+
+document.getElementById('cfg-apply').addEventListener('click', () => {
+  applyCfg();
+  showToast('Configurações aplicadas!', 'success');
+});
+
+document.getElementById('cfg-clear-storage').addEventListener('click', () => {
+  if (confirm('Limpar dados salvos do navegador?')) {
+    localStorage.removeItem('geoobras_r1_data');
+    showToast('Armazenamento limpo.', 'success');
+  }
+});
+
+/* ═══════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+  if (e.key === 'Escape') { closeModal(); ctxMenu.style.display = 'none'; }
+});
+
+document.getElementById('btn-undo').addEventListener('click', undo);
+document.getElementById('btn-redo').addEventListener('click', redo);
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+function showToast(msg, type = 'info') {
+  const area = document.getElementById('toast-area');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = {
+    success: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+    error: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
+    warning: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>'
+  };
+  t.innerHTML = (icons[type] || '') + msg;
+  area.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); t.addEventListener('transitionend', () => t.remove()); }, 4000);
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+// Column resizer
+function makeColsResizable() {
+  document.querySelectorAll('#thead-row th').forEach(th => {
+    if (th.querySelector('.th-resizer')) return;
+    th.style.position = 'relative';
+    const r = document.createElement('div');
+    r.className = 'th-resizer';
+    th.appendChild(r);
+    let startX, startW;
+    r.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      startX = e.clientX; startW = th.offsetWidth;
+      const onMove = ev => { const nw = startW + ev.clientX - startX; if (nw > 40) th.style.width = nw + 'px'; };
+      const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+// Initial capture for undo baseline
+captureHistory();
+updateDashboard();
+makeColsResizable();
+
+// Load persisted data
+loadPersistedData();
 </script>
 </body>
 </html>
