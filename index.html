@@ -255,6 +255,11 @@ html, body { height: 100%; overflow: hidden; font-family: var(--sans); backgroun
   padding: 2px 6px; border-radius: 10px;
 }
 
+/* Destaque âmbar para obras com geometria pendente (spec ARTESP §3.3) */
+#obras-table tbody tr.tr-no-geom { background: #fffbeb !important; }
+#obras-table tbody tr.tr-no-geom:hover { background: #fef9c3 !important; }
+#obras-table tbody tr.tr-no-geom td { border-bottom-color: #fde68a; }
+
 /* empty state */
 #empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; color: var(--text-muted); gap: 8px; }
 #empty-state svg { width: 32px; height: 32px; opacity: 0.3; }
@@ -327,6 +332,127 @@ textarea.field-input { resize: vertical; min-height: 70px; }
 .toast.error { background: #450a0a; border-left: 3px solid var(--danger); }
 .toast.warning { background: #451a03; border-left: 3px solid var(--warning); }
 .toast .toast-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ── Detail Card Popup ────────────────────────── */
+#detail-card {
+  position: fixed; z-index: 5000;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow-lg);
+  width: 320px; height: 480px; min-width: 240px; min-height: 280px;
+  display: none; flex-direction: column; overflow: hidden;
+  animation: cardIn 0.18s ease;
+  user-select: none;
+}
+#detail-card.open { display: flex; }
+#detail-card.dc-dragging { animation: none; box-shadow: 0 16px 48px rgba(0,0,0,0.22); }
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* ── Header (drag handle) */
+#detail-card-header {
+  padding: 12px 14px 10px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-shrink: 0; gap: 8px;
+  background: linear-gradient(135deg, var(--sidebar-bg) 0%, #1e3450 100%);
+  border-radius: 12px 12px 0 0;
+  cursor: grab;
+}
+#detail-card-header:active { cursor: grabbing; }
+#detail-card-header .dc-id {
+  font-size: 10px; font-family: var(--mono); color: rgba(255,255,255,0.4);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#detail-card-header .dc-title {
+  font-size: 12px; font-weight: 600; color: #fff;
+  line-height: 1.35; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+#detail-card-header .dc-badges { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+#detail-card-close {
+  background: rgba(255,255,255,0.1); border: none; cursor: pointer;
+  color: rgba(255,255,255,0.7); padding: 4px; border-radius: 6px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+#detail-card-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* ── Scrollable body */
+#detail-card-body {
+  padding: 10px 14px;
+  display: flex; flex-direction: column; gap: 0;
+  flex: 1; overflow-y: auto; user-select: text;
+}
+.dc-section-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-muted); margin: 10px 0 4px; padding-bottom: 3px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.dc-section-label:first-child { margin-top: 2px; }
+.dc-row {
+  display: grid; grid-template-columns: 88px 1fr;
+  align-items: center; gap: 6px;
+  padding: 3px 0; border-bottom: 1px solid #f4f5f7; min-height: 26px;
+}
+.dc-row:last-child { border-bottom: none; }
+.dc-key {
+  font-size: 10px; color: var(--text-muted); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Inline editable inputs inside card */
+.dc-inline-input {
+  border: 1px solid transparent; border-radius: 4px;
+  background: transparent; outline: none; width: 100%;
+  font-family: var(--sans); font-size: 11px; color: var(--text);
+  padding: 2px 4px; line-height: 1.4; transition: all 0.12s;
+  min-height: 22px;
+}
+.dc-inline-input:hover { border-color: var(--border); background: var(--bg); }
+.dc-inline-input:focus { border-color: var(--accent); background: #fffbf0; box-shadow: 0 0 0 2px var(--accent-light); }
+.dc-inline-input[type="date"] { font-size: 10px; }
+textarea.dc-inline-input { resize: none; min-height: 38px; }
+.dc-val-readonly {
+  font-size: 10px; color: var(--text-muted); font-family: var(--mono);
+  word-break: break-all; padding: 2px 4px;
+  overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  cursor: default; line-height: 1.4;
+}
+.dc-val-readonly:hover { -webkit-line-clamp: unset; }
+.dc-empty { font-size: 11px; color: var(--text-light); font-style: italic; padding: 2px 4px; }
+
+/* ── Geometry badge */
+.dc-geom-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
+}
+.dc-geom-badge.has { background: rgba(45,164,78,0.15); color: #166534; }
+.dc-geom-badge.none { background: #fef3c7; color: #92400e; }
+
+/* ── Footer */
+#detail-card-footer {
+  padding: 8px 14px; border-top: 1px solid var(--border);
+  display: flex; gap: 6px; flex-shrink: 0;
+  background: var(--card);
+}
+#detail-card-footer .btn { font-size: 11px; padding: 5px 10px; }
+
+/* ── Resize grip (bottom-right corner) */
+#dc-resize-handle {
+  position: absolute; bottom: 0; right: 0;
+  width: 18px; height: 18px; cursor: se-resize; z-index: 10;
+  display: flex; align-items: flex-end; justify-content: flex-end;
+  padding: 3px;
+}
+#dc-resize-handle svg { opacity: 0.25; transition: opacity 0.15s; }
+#dc-resize-handle:hover svg { opacity: 0.6; }
+
+#detail-card-overlay {
+  position: fixed; inset: 0; z-index: 4999;
+  display: none; pointer-events: none;
+}
+#detail-card-overlay.open { display: block; }
 
 /* ── Scrollbars ───────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -544,22 +670,22 @@ textarea.field-input { resize: vertical; min-height: 70px; }
             </colgroup>
             <thead>
               <tr id="thead-row">
-                <th data-f="id">id<span class="sort-icon"></span></th>
-                <th data-f="lote">lote<span class="sort-icon"></span></th>
-                <th data-f="rodovia">rodovia<span class="sort-icon"></span></th>
-                <th data-f="programa">programa<span class="sort-icon"></span></th>
-                <th data-f="item">item<span class="sort-icon"></span></th>
-                <th data-f="subitem">subitem<span class="sort-icon"></span></th>
-                <th data-f="detalhamento_servico">detalhamento<span class="sort-icon"></span></th>
-                <th data-f="unidade">unidade<span class="sort-icon"></span></th>
-                <th data-f="quantidade">qtd<span class="sort-icon"></span></th>
-                <th data-f="km_inicial">km ini<span class="sort-icon"></span></th>
-                <th data-f="km_final">km fim<span class="sort-icon"></span></th>
-                <th data-f="local">local<span class="sort-icon"></span></th>
-                <th data-f="data_inicial">dt ini<span class="sort-icon"></span></th>
-                <th data-f="data_final">dt fim<span class="sort-icon"></span></th>
-                <th data-f="observacoes_gerais">observações<span class="sort-icon"></span></th>
-                <th>wkt</th>
+                <th data-f="id" title="Identificador único da obra (String)">id<span class="sort-icon"></span></th>
+                <th data-f="lote" title="Padrão LXX — ex: L01, L12 (String, obrigatório)">lote<span class="sort-icon"></span></th>
+                <th data-f="rodovia" title="Nome ou sigla da rodovia — ex: SP-270 (String)">rodovia<span class="sort-icon"></span></th>
+                <th data-f="programa" title="Nome do programa de obras (String)">programa<span class="sort-icon"></span></th>
+                <th data-f="item" title="Código numérico do item, ou vazio (Number | null)">item<span class="sort-icon"></span></th>
+                <th data-f="subitem" title="Código numérico do subitem, ou vazio (Number | null)">subitem<span class="sort-icon"></span></th>
+                <th data-f="detalhamento_servico" title="Texto descritivo do serviço executado (String)">detalhamento<span class="sort-icon"></span></th>
+                <th data-f="unidade" title="Unidade de medida — ex: km, m², un (String)">unidade<span class="sort-icon"></span></th>
+                <th data-f="quantidade" title="Valor numérico da quantidade (Number)">qtd<span class="sort-icon"></span></th>
+                <th data-f="km_inicial" title="Marco quilométrico de início (Number)">km ini<span class="sort-icon"></span></th>
+                <th data-f="km_final" title="Marco quilométrico de fim (Number)">km fim<span class="sort-icon"></span></th>
+                <th data-f="local" title="Locais separados por ; — ex: PISTA_NORTE;CANTEIRO_CENTRAL (Array[String])">local<span class="sort-icon"></span></th>
+                <th data-f="data_inicial" title="Data de início no formato YYYY-MM-DD (String)">dt ini<span class="sort-icon"></span></th>
+                <th data-f="data_final" title="Data de término no formato YYYY-MM-DD (String)">dt fim<span class="sort-icon"></span></th>
+                <th data-f="observacoes_gerais" title="Texto livre de observações, ou vazio (String | null)">observações<span class="sort-icon"></span></th>
+                <th title="Well-Known Text da geometria associada (somente leitura)">wkt</th>
                 <th>ações</th>
               </tr>
             </thead>
@@ -643,6 +769,41 @@ textarea.field-input { resize: vertical; min-height: 70px; }
 </div><!-- #main -->
 
 </div><!-- #app -->
+
+<!-- Detail Card Popup -->
+<div id="detail-card-overlay"></div>
+<div id="detail-card">
+  <div id="detail-card-header">
+    <div style="flex:1;min-width:0">
+      <div class="dc-id" id="dc-id-label"></div>
+      <div class="dc-title" id="dc-title-label"></div>
+      <div class="dc-badges" id="dc-badges"></div>
+    </div>
+    <button id="detail-card-close" title="Fechar">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div id="detail-card-body"></div>
+  <div id="detail-card-footer">
+    <button class="btn btn-primary" id="dc-btn-edit" style="flex:1">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      Editar (modal)
+    </button>
+    <button class="btn btn-danger" id="dc-btn-delete" style="flex:0 0 auto">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Excluir
+    </button>
+  </div>
+  <!-- resize grip -->
+  <div id="dc-resize-handle" title="Redimensionar">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+      <rect x="6" y="0" width="1.5" height="10" rx="0.75"/>
+      <rect x="0" y="6" width="10" height="1.5" rx="0.75"/>
+    </svg>
+  </div>
+</div>
 
 <!-- Context menu -->
 <div id="ctx-menu">
@@ -783,7 +944,7 @@ function restoreSnapshot(snap) {
     let layer = null;
     if (s.geometry) {
       layer = geometryToLayer(s.geometry);
-      if (layer) drawnItems.addLayer(layer);
+      if (layer) { drawnItems.addLayer(layer); bindLayerClick(layer); }
     }
     obras.push({...s, layer});
   });
@@ -883,18 +1044,20 @@ map.on(L.Draw.Event.CREATED, e => {
     captureHistory();
     const obra = obras.find(o => o.id === associatingId);
     if (obra) {
-      // remove old layer if present
       if (obra.layer) drawnItems.removeLayer(obra.layer);
       obra.layer = layer;
       obra.geometry = geom;
       obra.wkt = geomToWKT(geom);
+      bindLayerClick(layer);
     }
     associatingId = null;
     showToast('Geometria associada com sucesso!', 'success');
   } else {
     captureHistory();
     const id = makeUniqueId();
-    obras.push(makeEntry(id, layer, geom));
+    const entry = makeEntry(id, layer, geom);
+    obras.push(entry);
+    bindLayerClick(layer);
   }
   renderTable();
   updateDashboard();
@@ -928,6 +1091,48 @@ map.on(L.Draw.Event.DELETED, e => {
   updateDashboard();
   scheduleSave();
 });
+
+/* ── Map edit-mode guard ─────────────────────── */
+// Card must NOT open while the user is in Leaflet Draw edit/delete mode
+let mapEditMode = false;
+map.on('draw:editstart draw:deletestart draw:drawstart', () => { mapEditMode = true;  closeDetailCard(); });
+map.on('draw:editstop  draw:deletestop  draw:drawstop',  () => { mapEditMode = false; });
+
+/* ── Bind click on a map layer ───────────────── */
+function bindLayerClick(layer) {
+  if (!layer) return;
+
+  const fireCard = function(e) {
+    if (mapEditMode) return;
+    L.DomEvent.stopPropagation(e);
+    const obra = obras.find(o => o.layer === layer ||
+      (o.layer && o.layer.getLayers && o.layer.getLayers().includes(layer)));
+    if (!obra) return;
+
+    // Highlight row + map
+    const tr = document.querySelector(`#tbody-obras tr[data-obra-id="${obra.id}"]`);
+    if (tr) setHighlight(obra, tr);
+
+    // Open card — anchor near the click point on screen
+    const pt = e.originalEvent
+      ? { getBoundingClientRect: () => ({ left: e.originalEvent.clientX - 10, right: e.originalEvent.clientX + 10, top: e.originalEvent.clientY - 10, bottom: e.originalEvent.clientY }) }
+      : null;
+    openDetailCard(obra.id, pt);
+  };
+
+  // Single layer (polyline, polygon, marker)
+  if (layer.on) {
+    layer.off('click', fireCard); // avoid double-binding
+    layer.on('click', fireCard);
+  }
+  // FeatureGroup (multi-geometry)
+  if (layer.getLayers) {
+    layer.getLayers().forEach(sub => {
+      sub.off('click', fireCard);
+      sub.on('click', fireCard);
+    });
+  }
+}
 
 /* ═══════════════════════════════════════════════
    GEOMETRY HELPERS
@@ -1064,6 +1269,7 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.dataset.obraId = o.id;
     if (highlightedLayer && o.layer === highlightedLayer) tr.classList.add('tr-selected');
+    if (!hasGeom) tr.classList.add('tr-no-geom');
 
     tr.innerHTML = `
       <td><input class="cell-input" data-f="id" value="${esc(o.id)}"></td>
@@ -1197,13 +1403,13 @@ tbody.addEventListener('click', e => {
     return;
   }
 
-  // Row click → highlight on map
+  // Row click → highlight on map + open detail card
   const tr = e.target.closest('tr');
   if (!tr) return;
   const obra = obras.find(o => o.id === tr.dataset.obraId);
-  if (obra && obra.layer) {
-    setHighlight(obra, tr);
-  }
+  if (!obra) return;
+  if (obra.layer) setHighlight(obra, tr);
+  openDetailCard(obra.id, tr);
 });
 
 // Hover
@@ -1233,6 +1439,277 @@ function setHighlight(obra, tr) {
   if (obra.layer.getBounds) map.fitBounds(obra.layer.getBounds(), { padding: [30, 30] });
   else if (obra.layer.getLatLng) map.setView(obra.layer.getLatLng(), 16);
 }
+
+/* ═══════════════════════════════════════════════
+   DETAIL CARD POPUP
+═══════════════════════════════════════════════ */
+let detailCardObraId = null;
+
+const detailCard    = document.getElementById('detail-card');
+const detailOverlay = document.getElementById('detail-card-overlay');
+
+const FIELD_LABELS = {
+  id:                   'ID',
+  lote:                 'Lote',
+  rodovia:              'Rodovia',
+  programa:             'Programa',
+  item:                 'Item',
+  subitem:              'Subitem',
+  detalhamento_servico: 'Detalhamento',
+  unidade:              'Unidade',
+  quantidade:           'Qtd.',
+  km_inicial:           'KM Inicial',
+  km_final:             'KM Final',
+  local:                'Local',
+  data_inicial:         'Dt. Início',
+  data_final:           'Dt. Fim',
+  observacoes_gerais:   'Observações',
+  wkt:                  'WKT',
+};
+
+const FIELD_TYPES = {
+  quantidade: 'number', km_inicial: 'number', km_final: 'number',
+  data_inicial: 'date', data_final: 'date',
+  detalhamento_servico: 'textarea', observacoes_gerais: 'textarea',
+};
+
+function refreshDetailCardHeader() {
+  const obra = obras.find(o => o.id === detailCardObraId);
+  if (!obra) return;
+  document.getElementById('dc-id-label').textContent = 'ID ' + (obra.id || '—');
+  document.getElementById('dc-title-label').textContent =
+    obra.detalhamento_servico || obra.programa || obra.rodovia || 'Obra sem título';
+  const badges = document.getElementById('dc-badges');
+  badges.innerHTML = '';
+  if (obra.lote) {
+    const b = document.createElement('span'); b.className = 'tag tag-orange'; b.textContent = obra.lote; badges.appendChild(b);
+  }
+  if (obra.rodovia) {
+    const b = document.createElement('span'); b.className = 'tag tag-blue'; b.textContent = obra.rodovia; badges.appendChild(b);
+  }
+  const geomB = document.createElement('span');
+  geomB.className = 'dc-geom-badge ' + (obra.layer ? 'has' : 'none');
+  geomB.textContent = obra.layer ? '✓ Com geometria' : '⚠ Sem geometria';
+  badges.appendChild(geomB);
+}
+
+function openDetailCard(obraId, anchorEl) {
+  const obra = obras.find(o => o.id === obraId);
+  if (!obra) return;
+  detailCardObraId = obraId;
+
+  refreshDetailCardHeader();
+
+  // Body — inline editable fields
+  const body = document.getElementById('detail-card-body');
+  body.innerHTML = '';
+
+  const sections = [
+    { label: 'Identificação', fields: ['id','lote','rodovia','programa'] },
+    { label: 'Serviço',       fields: ['item','subitem','detalhamento_servico','unidade','quantidade'] },
+    { label: 'Localização',   fields: ['km_inicial','km_final','local'] },
+    { label: 'Período',       fields: ['data_inicial','data_final'] },
+    { label: 'Extras',        fields: ['observacoes_gerais','wkt'] },
+  ];
+
+  sections.forEach(sec => {
+    const lbl = document.createElement('div');
+    lbl.className = 'dc-section-label';
+    lbl.textContent = sec.label;
+    body.appendChild(lbl);
+
+    sec.fields.forEach(f => {
+      const isWkt = f === 'wkt';
+      let rawVal = isWkt ? (obra.wkt || '') : obra[f];
+      if (rawVal === null || rawVal === undefined) rawVal = '';
+      if (Array.isArray(rawVal)) rawVal = rawVal.join('; ');
+      rawVal = String(rawVal).trim();
+
+      const row = document.createElement('div');
+      row.className = 'dc-row';
+      row.dataset.field = f;
+
+      const key = document.createElement('span');
+      key.className = 'dc-key';
+      key.textContent = FIELD_LABELS[f] || f;
+
+      let valEl;
+      if (isWkt) {
+        valEl = document.createElement('div');
+        valEl.className = 'dc-val-readonly';
+        valEl.textContent = rawVal || '—';
+        valEl.title = rawVal;
+      } else {
+        const type = FIELD_TYPES[f] || 'text';
+        if (type === 'textarea') {
+          valEl = document.createElement('textarea');
+          valEl.className = 'dc-inline-input';
+          valEl.rows = 2;
+          valEl.value = rawVal;
+          valEl.placeholder = rawVal ? '' : '—';
+        } else {
+          valEl = document.createElement('input');
+          valEl.className = 'dc-inline-input';
+          valEl.type = type;
+          valEl.value = rawVal;
+          valEl.placeholder = rawVal ? '' : '—';
+        }
+        valEl.dataset.dcField = f;
+        // Prevent header drag from starting when typing
+        valEl.addEventListener('mousedown', e => e.stopPropagation());
+        valEl.addEventListener('change', dcHandleFieldChange);
+        valEl.addEventListener('input',  dcHandleFieldChange);
+      }
+
+      row.appendChild(key);
+      row.appendChild(valEl);
+      body.appendChild(row);
+    });
+  });
+
+  positionDetailCard(anchorEl);
+  detailCard.classList.add('open');
+  detailOverlay.classList.add('open');
+}
+
+function dcHandleFieldChange(e) {
+  const f = e.target.dataset.dcField;
+  if (!f || !detailCardObraId) return;
+  const obra = obras.find(o => o.id === detailCardObraId);
+  if (!obra) return;
+  let val = e.target.value;
+  if (f === 'local') val = val.replace(/\s/g, '');
+  if (['quantidade','km_inicial','km_final'].includes(f)) val = val.replace(/,/g, '.');
+  if (f === 'observacoes_gerais' && val === '') val = null;
+  obra[f] = val;
+  // Update header if relevant field changed
+  if (['detalhamento_servico','programa','rodovia','lote'].includes(f)) refreshDetailCardHeader();
+  scheduleSave();
+  // Sync back to the table row without full re-render
+  const tr = document.querySelector(`#tbody-obras tr[data-obra-id="${obra.id}"]`);
+  if (tr) {
+    const inp = tr.querySelector(`[data-f="${f}"]`);
+    if (inp && inp !== e.target) inp.value = typeof val === 'string' ? val : (val ?? '');
+  }
+}
+
+function positionDetailCard(anchorEl) {
+  const cardW = detailCard.offsetWidth  || 320;
+  const cardH = detailCard.offsetHeight || 480;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let top, left;
+  if (anchorEl) {
+    const rect = anchorEl.getBoundingClientRect();
+    top  = rect.bottom + 8;
+    left = rect.right  - cardW;
+    if (left + cardW > vw - 12) left = vw - cardW - 12;
+    if (left < 12) left = 12;
+    if (top + cardH > vh - 12) top = rect.top - cardH - 8;
+    if (top < 12) top = 12;
+  } else {
+    top  = Math.max(12, vh / 2 - cardH / 2);
+    left = Math.max(12, vw / 2 - cardW / 2);
+  }
+  detailCard.style.top  = top  + 'px';
+  detailCard.style.left = left + 'px';
+}
+
+function closeDetailCard() {
+  detailCard.classList.remove('open');
+  detailOverlay.classList.remove('open');
+  // Flush any pending changes to the full table
+  if (detailCardObraId) {
+    renderTable();
+    updateDashboard();
+  }
+  detailCardObraId = null;
+}
+
+document.getElementById('detail-card-close').addEventListener('click', closeDetailCard);
+
+document.getElementById('dc-btn-edit').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!detailCardObraId) return;
+  const idx = obras.findIndex(o => o.id === detailCardObraId);
+  closeDetailCard();
+  if (idx !== -1) openModal(idx);
+});
+
+document.getElementById('dc-btn-delete').addEventListener('click', e => {
+  e.stopPropagation();
+  const idToDelete = detailCardObraId;
+  if (!idToDelete) return;
+  captureHistory();
+  const idx = obras.findIndex(o => o.id === idToDelete);
+  closeDetailCard(); // close first (clears detailCardObraId)
+  if (idx !== -1) {
+    if (obras[idx].layer) drawnItems.removeLayer(obras[idx].layer);
+    obras.splice(idx, 1);
+    renderTable();
+    updateDashboard();
+    scheduleSave();
+    showToast('Obra excluída.', 'success');
+  }
+});
+
+/* ── Drag to move ─────────────────────────────── */
+(function () {
+  const header = document.getElementById('detail-card-header');
+  let dragging = false, ox = 0, oy = 0;
+
+  header.addEventListener('mousedown', e => {
+    if (e.target.closest('button')) return; // don't drag on close btn
+    dragging = true;
+    const rect = detailCard.getBoundingClientRect();
+    ox = e.clientX - rect.left;
+    oy = e.clientY - rect.top;
+    detailCard.classList.add('dc-dragging');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const w = detailCard.offsetWidth, h = detailCard.offsetHeight;
+    let left = e.clientX - ox;
+    let top  = e.clientY - oy;
+    left = Math.max(0, Math.min(left, vw - w));
+    top  = Math.max(0, Math.min(top,  vh - h));
+    detailCard.style.left = left + 'px';
+    detailCard.style.top  = top  + 'px';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    detailCard.classList.remove('dc-dragging');
+  });
+})();
+
+/* ── Resize ───────────────────────────────────── */
+(function () {
+  const grip = document.getElementById('dc-resize-handle');
+  let resizing = false, startX, startY, startW, startH;
+
+  grip.addEventListener('mousedown', e => {
+    resizing = true;
+    startX = e.clientX; startY = e.clientY;
+    startW = detailCard.offsetWidth;
+    startH = detailCard.offsetHeight;
+    e.preventDefault(); e.stopPropagation();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    const newW = Math.max(240, startW + (e.clientX - startX));
+    const newH = Math.max(280, startH + (e.clientY - startY));
+    detailCard.style.width  = newW + 'px';
+    detailCard.style.height = newH + 'px';
+  });
+
+  window.addEventListener('mouseup', () => { resizing = false; });
+})();
 
 // Paste from Excel
 tbody.addEventListener('paste', e => {
@@ -1382,7 +1859,7 @@ function processGeoJSON(geo, silent) {
   geo.features.forEach(feat => {
     const geom = feat.geometry;
     const layer = geom ? geometryToLayer(geom) : null;
-    if (layer) drawnItems.addLayer(layer);
+    if (layer) { drawnItems.addLayer(layer); bindLayerClick(layer); }
     const p = feat.properties || {};
     const id = makeUniqueId(p.id ? String(p.id) : undefined);
     const e = makeEntry(id, layer, geom);
@@ -1411,18 +1888,21 @@ function buildGeoJSON() {
     if (ids.has(o.id)) { showToast(`ID duplicado: ${o.id}. Exportação cancelada.`, 'error'); return null; }
     ids.add(o.id);
     const props = {
-      id: String(o.id), lote: o.lote || '', rodovia: o.rodovia || '',
-      programa: o.programa || '',
-      item: o.item !== '' ? (Number(o.item) || null) : null,
-      subitem: o.subitem !== '' ? (Number(o.subitem) || null) : null,
-      detalhamento_servico: o.detalhamento_servico || '',
-      unidade: o.unidade || '',
-      quantidade: o.quantidade !== '' ? (Number(o.quantidade) || null) : null,
-      km_inicial: o.km_inicial !== '' ? (Number(o.km_inicial) || null) : null,
-      km_final: o.km_final !== '' ? (Number(o.km_final) || null) : null,
-      local: Array.isArray(o.local) ? o.local : (o.local ? String(o.local).split(';').map(s=>s.trim()).filter(Boolean) : []),
-      data_inicial: o.data_inicial || null, data_final: o.data_final || null,
-      observacoes_gerais: o.observacoes_gerais || null
+      id: String(o.id).trim(),
+      lote: (o.lote || '').trim(),
+      rodovia: (o.rodovia || '').trim(),
+      programa: (o.programa || '').trim(),
+      item: (o.item !== '' && o.item != null) ? (isNaN(parseFloat(o.item)) ? null : parseFloat(o.item)) : null,
+      subitem: (o.subitem !== '' && o.subitem != null) ? (isNaN(parseFloat(o.subitem)) ? null : parseFloat(o.subitem)) : null,
+      detalhamento_servico: (o.detalhamento_servico || '').trim(),
+      unidade: (o.unidade || '').trim(),
+      quantidade: (o.quantidade !== '' && o.quantidade != null) ? (isNaN(parseFloat(o.quantidade)) ? null : parseFloat(o.quantidade)) : null,
+      km_inicial: (o.km_inicial !== '' && o.km_inicial != null) ? (isNaN(parseFloat(o.km_inicial)) ? null : parseFloat(o.km_inicial)) : null,
+      km_final: (o.km_final !== '' && o.km_final != null) ? (isNaN(parseFloat(o.km_final)) ? null : parseFloat(o.km_final)) : null,
+      local: Array.isArray(o.local) ? o.local.map(s => s.trim()).filter(Boolean) : (o.local ? String(o.local).split(';').map(s => s.trim()).filter(Boolean) : []),
+      data_inicial: o.data_inicial || null,
+      data_final: o.data_final || null,
+      observacoes_gerais: o.observacoes_gerais ? String(o.observacoes_gerais).trim() : null
     };
     features.push({ type: 'Feature', geometry: o.geometry || null, properties: props });
   }
@@ -1460,17 +1940,35 @@ document.getElementById('fileImport').addEventListener('change', e => {
 
 document.getElementById('btn-export-geojson').addEventListener('click', () => {
   if (!obras.length) { showToast('Nenhuma obra para exportar.', 'warning'); return; }
-  const reqGeom = document.getElementById('cfg-val-geom').checked;
-  if (reqGeom) {
-    const sem = obras.filter(o => !o.geometry);
-    if (sem.length) {
-      if (!confirm(`${sem.length} obra(s) sem geometria. Exportar assim mesmo?`)) return;
+
+  // ── Checklist de Integridade ARTESP ──────────────────────────
+  // 1. Verificar geometrias pendentes
+  const semGeom = obras.filter(o => !o.geometry);
+  if (semGeom.length && document.getElementById('cfg-val-geom').checked) {
+    if (!confirm(`⚠ ${semGeom.length} obra(s) sem geometria associada:\n${semGeom.map(o => o.id).join(', ')}\n\nDeseja exportar assim mesmo?`)) return;
+  }
+
+  // 2. Verificar IDs duplicados
+  const allIds = obras.map(o => o.id);
+  const dupIds = allIds.filter((id, i) => allIds.indexOf(id) !== i);
+  if (dupIds.length) {
+    showToast(`IDs duplicados: ${[...new Set(dupIds)].join(', ')}. Corrija antes de exportar.`, 'error');
+    return;
+  }
+
+  // 3. Verificar formato do campo lote (padrão LXX)
+  if (document.getElementById('cfg-val-lote').checked) {
+    const loteInvalido = obras.filter(o => o.lote && !/^L\d{2}$/.test(o.lote));
+    if (loteInvalido.length) {
+      if (!confirm(`⚠ ${loteInvalido.length} obra(s) com campo Lote fora do padrão (LXX):\n${loteInvalido.map(o => `${o.id}: "${o.lote}"`).join('\n')}\n\nDeseja exportar assim mesmo?`)) return;
     }
   }
+  // ─────────────────────────────────────────────────────────────
+
   const geo = buildGeoJSON();
   if (geo) {
     downloadFile(JSON.stringify(geo, null, 2), 'obras.geojson', 'application/geo+json');
-    showToast('GeoJSON exportado!', 'success');
+    showToast('GeoJSON exportado com sucesso!', 'success');
   }
 });
 
@@ -1676,7 +2174,7 @@ document.getElementById('cfg-clear-storage').addEventListener('click', () => {
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
-  if (e.key === 'Escape') { closeModal(); ctxMenu.style.display = 'none'; }
+  if (e.key === 'Escape') { closeModal(); closeDetailCard(); ctxMenu.style.display = 'none'; }
 });
 
 document.getElementById('btn-undo').addEventListener('click', undo);
