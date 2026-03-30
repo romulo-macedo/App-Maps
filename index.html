@@ -1348,10 +1348,14 @@ tbody.addEventListener('input', e => {
   if (!obra) return;
 
   let val = inp.value;
-  if (f === 'local') val = val.replace(/\s/g, '');
-  if (['quantidade','km_inicial','km_final'].includes(f)) val = val.replace(/,/g, '.');
-  if (f === 'observacoes_gerais' && val === '') val = null;
-  obra[f] = val;
+  if (f === 'local') {
+    val = val.replace(/\s/g, '');
+    obra[f] = val ? val.split(';').map(s => s.trim()).filter(Boolean) : [];
+  } else {
+    if (['quantidade','km_inicial','km_final'].includes(f)) val = val.replace(/,/g, '.');
+    if (f === 'observacoes_gerais' && val === '') val = null;
+    obra[f] = val;
+  }
 
   // Validation
   if (f === 'lote' && document.getElementById('cfg-val-lote').checked) {
