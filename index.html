@@ -3629,6 +3629,16 @@
       if (!silent) showToast(`${obras.length} obra(s) importada(s)!`, 'success');
     }
 
+    function roundGeometry(geom, precision = 7) {
+      if (!geom || !geom.coordinates) return geom;
+      const round = (val) => Number(parseFloat(val).toFixed(precision));
+      const roundCoords = (coords) => {
+        if (typeof coords[0] === 'number') return coords.map(round);
+        return coords.map(roundCoords);
+      };
+      return { ...geom, coordinates: roundCoords(geom.coordinates) };
+    }
+
     function buildGeoJSON() {
       const ids = new Set();
       const features = [];
@@ -3640,18 +3650,18 @@
           lote: (o.lote || '').trim(),
           rodovia: (o.rodovia || '').trim(),
           programa: (o.programa || '').trim(),
-          item: (o.item !== '' && o.item != null) ? (isNaN(parseFloat(o.item)) ? null : parseFloat(o.item)) : null,
-          subitem: (o.subitem !== '' && o.subitem != null) ? (isNaN(parseFloat(o.subitem)) ? null : parseFloat(o.subitem)) : null,
+          item: (o.item !== '' && o.item != null) ? parseInt(o.item, 10) || null : null,
+          subitem: (o.subitem !== '' && o.subitem != null) ? parseInt(o.subitem, 10) || null : null,
           detalhamento_servico: (o.detalhamento_servico || '').trim(),
           unidade: (o.unidade || '').trim(),
-          quantidade: (o.quantidade !== '' && o.quantidade != null) ? (isNaN(parseFloat(o.quantidade)) ? null : parseFloat(o.quantidade)) : null,
-          km_inicial: (o.km_inicial !== '' && o.km_inicial != null) ? (isNaN(parseFloat(o.km_inicial)) ? null : parseFloat(o.km_inicial)) : null,
-          km_final: (o.km_final !== '' && o.km_final != null) ? (isNaN(parseFloat(o.km_final)) ? null : parseFloat(o.km_final)) : null,
+          quantidade: (o.quantidade !== '' && o.quantidade != null) ? Number(parseFloat(o.quantidade).toFixed(3)) : null,
+          km_inicial: (o.km_inicial !== '' && o.km_inicial != null) ? Number(parseFloat(o.km_inicial).toFixed(3)) : null,
+          km_final: (o.km_final !== '' && o.km_final != null) ? Number(parseFloat(o.km_final).toFixed(3)) : null,
           local: Array.isArray(o.local) ? o.local.map(s => s.trim()).filter(Boolean) : (o.local ? String(o.local).split(';').map(s => s.trim()).filter(Boolean) : []),
           data_final: o.data_final || null,
           observacoes_gerais: (o.observacoes_gerais === "" || o.observacoes_gerais == null) ? null : String(o.observacoes_gerais).trim()
         };
-        features.push({ type: 'Feature', geometry: o.geometry || null, properties: props });
+        features.push({ type: 'Feature', geometry: roundGeometry(o.geometry, 7) || null, properties: props });
       }
       return {
         type: 'FeatureCollection',
