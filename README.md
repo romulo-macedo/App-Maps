@@ -161,4 +161,4 @@ A aplicação foi desenvolvida para seguir a estrutura de dados definida no Sche
 - **Local:** Validação com a lista de códigos de localização, suportando múltiplos valores separados por `;`.
 - **Geometria:** Opcional durante a edição, mas sua presença pode ser exigida na exportação.
 
-Para uma referência completa, consulte a [documentação oficial do schema]([https://github.com/seu-usuario/geoobras-artesp-r1/blob/main/docs/SCHEMA_ARTESP_R0.md](https://dadosabertos.artesp.sp.gov.br/dataset/programacao-de-obras/resource/cd8f9bb4-3a78-4c7f-99c8-f289da731e10).
+Para uma referência completa, consulte a [documentação oficial do schema](https://dadosabertos.artesp.sp.gov.br/dataset/programacao-de-obras/resource/cd8f9bb4-3a78-4c7f-99c8-f289da731e10).
