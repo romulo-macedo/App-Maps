@@ -25,8 +25,6 @@ A aplicação combina um editor de dados tabular avançado com um mapa interativ
 - **🏷️ Gerenciamento de Tags:** Edição visual e simplificada para campos de múltiplos valores, como `local`, usando seletores de tags ao invés de campos de texto puros.
 - **📜 Registro de Atividades:** Visualize o histórico de todas as alterações feitas em cada obra diretamente no card de detalhes.
 
-## 🚀 Demonstração
-
 ---
 
 ## 📋 Pré-requisitos
@@ -163,4 +161,4 @@ A aplicação foi desenvolvida para seguir a estrutura de dados definida no Sche
 - **Local:** Validação com a lista de códigos de localização, suportando múltiplos valores separados por `;`.
 - **Geometria:** Opcional durante a edição, mas sua presença pode ser exigida na exportação.
 
-Para uma referência completa, consulte a [documentação oficial do schema](https://github.com/seu-usuario/geoobras-artesp-r1/blob/main/docs/SCHEMA_ARTESP_R0.md). (Substitua o link pelo link real da documentação do schema, se disponível).
+Para uma referência completa, consulte a [documentação oficial do schema]([https://github.com/seu-usuario/geoobras-artesp-r1/blob/main/docs/SCHEMA_ARTESP_R0.md](https://dadosabertos.artesp.sp.gov.br/dataset/programacao-de-obras/resource/cd8f9bb4-3a78-4c7f-99c8-f289da731e10)). (Substitua o link pelo link real da documentação do schema, se disponível).
