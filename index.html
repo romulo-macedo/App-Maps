@@ -1887,6 +1887,109 @@
     .tag-option.selected:hover {
       background: var(--accent-dark);
     }
+    /* ── Gantt / Timeline ────────────────────────── */
+    #timeline-container {
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .timeline-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #gantt-count-label {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .gantt-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .gantt-controls select {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-family: var(--sans);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      height: 28px;
+    }
+
+    .gantt-controls select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+
+    .gantt-pagination {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .gantt-nav-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--card);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      transition: all 0.15s;
+      padding: 0;
+    }
+
+    .gantt-nav-btn:hover:not(:disabled) {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent-dark);
+    }
+
+    .gantt-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    #gantt-page-label {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    #gantt-canvas-wrap {
+      padding: 8px 8px 8px 4px;
+      transition: height 0.2s ease;
+    }
   </style>
 </head>
 
@@ -2043,10 +2146,32 @@
             </div>
             <div id="timeline-container">
               <div class="timeline-header">
-                <div class="timeline-title">Linha do Tempo (Gantt)</div>
+                <div class="timeline-title">
+                  Gantt
+                  <span id="gantt-count-label"></span>
+                </div>
+                <div class="gantt-controls">
+                  <select id="gantt-filter-lote" title="Filtrar por lote">
+                    <option value="">Todos os lotes</option>
+                  </select>
+                  <select id="gantt-page-size" title="Itens por página">
+                    <option value="10">10 / pág</option>
+                    <option value="20" selected>20 / pág</option>
+                    <option value="30">30 / pág</option>
+                    <option value="50">50 / pág</option>
+                  </select>
+                  <div class="gantt-pagination">
+                    <button class="gantt-nav-btn" id="gantt-prev" title="Anterior" disabled>‹</button>
+                    <span id="gantt-page-label">1 / 1</span>
+                    <button class="gantt-nav-btn" id="gantt-next" title="Próxima" disabled>›</button>
+                  </div>
+                </div>
               </div>
-              <div style="height: 240px; position: relative;">
+              <div id="gantt-canvas-wrap" style="position:relative;">
                 <canvas id="chart-timeline"></canvas>
+              </div>
+              <div id="gantt-empty" style="display:none;text-align:center;padding:28px 16px;color:var(--text-muted);font-size:12px">
+                Nenhuma obra com datas cadastradas. Preencha <strong>Data Inicial</strong> e <strong>Data Final</strong> para visualizar o Gantt.
               </div>
             </div>
           </div>
@@ -2231,28 +2356,53 @@
             </div>
           </div>
         </div>
-        <div class="config-section">
-          <div class="config-section-title">Validação ARTESP</div>
-          <div class="config-body">
-            <div class="config-row">
-              <span class="config-label">Validar campo Lote (L00)</span>
-              <label class="toggle-switch">
-                <input type="checkbox" id="cfg-val-lote" checked>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="config-row">
-              <span class="config-label">Exigir geometria na exportação</span>
-              <label class="toggle-switch">
-                <input type="checkbox" id="cfg-val-geom" checked>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div style="margin-top:4px">
-              <button class="btn btn-primary" id="cfg-apply">Aplicar Configurações</button>
-            </div>
-          </div>
-        </div>
+<div class="config-section">
+  <div class="config-section-title">Validação ARTESP</div>
+  <div class="config-body">
+    <div class="config-row">
+      <span class="config-label">Validar campo Lote (L00)</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="cfg-val-lote" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="config-row">
+      <span class="config-label">Exigir geometria na exportação</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="cfg-val-geom" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="config-row">
+      <span class="config-label">Modo Avançado de Validação</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="cfg-val-advanced">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div id="advanced-validation-settings" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg);">
+      <div class="config-row">
+        <span class="config-label">Lotes Permitidos (separados por vírgula)</span>
+        <input type="text" class="config-input" id="cfg-val-lotes-custom" placeholder="L01,L06,L07,...">
+      </div>
+      <div class="config-row">
+        <span class="config-label">Programas Permitidos (separados por vírgula)</span>
+        <input type="text" class="config-input" id="cfg-val-programas-custom" placeholder="REVIT,CAPEX,NS,...">
+      </div>
+      <div class="config-row">
+        <span class="config-label">Unidades Permitidas (separadas por vírgula)</span>
+        <input type="text" class="config-input" id="cfg-val-unidades-custom" placeholder="km,vb,un,...">
+      </div>
+      <div class="config-row">
+        <span class="config-label">Locais Permitidos (separados por vírgula)</span>
+        <input type="text" class="config-input" id="cfg-val-locais-custom" placeholder="PISTA_NORTE,PISTA_SUL,...">
+      </div>
+    </div>
+    <div style="margin-top:4px">
+      <button class="btn btn-primary" id="cfg-apply">Aplicar Configurações</button>
+    </div>
+  </div>
+</div>
       </div>
     </div><!-- #main -->
 
@@ -2286,6 +2436,14 @@
             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
         Editar (modal)
+      </button>
+      <button class="btn" id="dc-btn-streetview" style="flex:0 0 auto;display:none" title="Abrir Street View no Google Maps">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Street View
       </button>
       <button class="btn btn-danger" id="dc-btn-delete" style="flex:0 0 auto">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
@@ -2427,11 +2585,11 @@
     /* ═══════════════════════════════════════════════
        CORE DATA & HISTORY
     ═══════════════════════════════════════════════ */
-    let obras = [];
-    const FIELDS = ['id', 'lote', 'rodovia', 'programa', 'item', 'subitem', 'detalhamento_servico', 'unidade', 'quantidade', 'km_inicial', 'km_final', 'local', 'data_inicial', 'data_final', 'observacoes_gerais'];
-    const ALL_FIELDS = [...FIELDS, 'wkt'];
+let obras = [];
+const FIELDS = ['id', 'lote', 'rodovia', 'programa', 'item', 'subitem', 'detalhamento_servico', 'unidade', 'quantidade', 'km_inicial', 'km_final', 'local', 'data_inicial', 'data_final', 'observacoes_gerais'];
+const ALL_FIELDS = [...FIELDS, 'wkt'];
 
-    // ARTESP R0 Validation Data
+    // ARTESP R0 Validation Data — must be declared BEFORE the CUSTOM_* variables below
     const ARTESP_LOTES = ['L01', 'L06', 'L07', 'L11', 'L13', 'L16', 'L19', 'L20', 'L21', 'L22', 'L23', 'L24', 'L25', 'L27', 'L28', 'L29', 'L30', 'L31', 'L32', 'L33', 'L34'];
     const ARTESP_PROGRAMAS = ['REVIT', 'CAPEX', 'NS'];
     const ARTESP_UNIDADES = ['km', 'vb', 'un', 't', 'kg', 'm', 'm2', 'm3', 'H/h', 'L', 'k'];
@@ -2443,21 +2601,27 @@
       /^[A-Z]{3}\d{6}[A-Z]?$/
     ];
 
-    function validateField(f, val) {
-      if (val === '' || val == null) return true;
-      if (f === 'lote') return ARTESP_LOTES.includes(val);
-      if (f === 'programa') return ARTESP_PROGRAMAS.includes(val);
-      if (f === 'unidade') return ARTESP_UNIDADES.includes(val);
-      if (f === 'rodovia') return ROD_REGEX.some(re => re.test(val));
-      if (f === 'local') {
-        const items = Array.isArray(val) ? val : String(val).split(';').map(s => s.trim()).filter(Boolean);
-        return items.length >= 1 && items.every(it => ARTESP_LOCAIS.includes(it));
-      }
-      if (['quantidade', 'km_inicial', 'km_final'].includes(f)) {
-        return /^\d*\.?\d{0,3}$/.test(String(val).replace(/,/g, '.'));
-      }
-      return true;
-    }
+// Variáveis personalizadas para validação avançada (inicializadas APÓS as constantes acima)
+let CUSTOM_ARTESP_LOTES = [...ARTESP_LOTES];
+let CUSTOM_ARTESP_PROGRAMAS = [...ARTESP_PROGRAMAS];
+let CUSTOM_ARTESP_UNIDADES = [...ARTESP_UNIDADES];
+let CUSTOM_ARTESP_LOCAIS = [...ARTESP_LOCAIS];
+
+function validateField(f, val) {
+  if (val === '' || val == null) return true;
+  if (f === 'lote') return CUSTOM_ARTESP_LOTES.includes(val);
+  if (f === 'programa') return CUSTOM_ARTESP_PROGRAMAS.includes(val);
+  if (f === 'unidade') return CUSTOM_ARTESP_UNIDADES.includes(val);
+  if (f === 'rodovia') return ROD_REGEX.some(re => re.test(val));
+  if (f === 'local') {
+    const items = Array.isArray(val) ? val : String(val).split(';').map(s => s.trim()).filter(Boolean);
+    return items.length >= 1 && items.every(it => CUSTOM_ARTESP_LOCAIS.includes(it));
+  }
+  if (['quantidade', 'km_inicial', 'km_final'].includes(f)) {
+    return /^\d*\.?\d{0,3}$/.test(String(val).replace(/,/g, '.'));
+  }
+  return true;
+}
 
 
     // History
@@ -2941,8 +3105,9 @@
     ═══════════════════════════════════════════════ */
     const tbody = document.getElementById('tbody-obras');
 
-    // Input change
-    tbody.addEventListener('input', e => {
+    // Input / Change handler — shared so both text input and native date picker are captured
+    // (date pickers fire 'change', not always 'input', causing data_inicial to be lost on export)
+    function handleCellInputChange(e) {
       const inp = e.target;
       if (!inp.classList.contains('cell-input') || inp.readOnly) return;
       const f = inp.dataset.f;
@@ -2967,14 +3132,14 @@
       // Validation
       const isValid = validateField(f, val);
       inp.classList.toggle('invalid', !isValid);
-      if (!isValid) {
-        inp.title = "Valor inválido para o padrão ARTESP";
-      } else {
-        inp.title = "";
-      }
+      inp.title = isValid ? '' : 'Valor inválido para o padrão ARTESP';
 
       scheduleSave();
-    });
+    }
+
+    tbody.addEventListener('input', handleCellInputChange);
+    // 'change' is fired by native date pickers (and selects) — required to capture data_inicial/data_final
+    tbody.addEventListener('change', handleCellInputChange);
 
     // Focus → capture history
     tbody.addEventListener('focus', e => {
@@ -2983,9 +3148,23 @@
       }
     }, true);
 
-    // Blur → refresh visual tags/validation
+    // Blur — persist date value first (date pickers can blur before 'input' fires), then re-render
     tbody.addEventListener('blur', e => {
       if (e.target.classList.contains('cell-input')) {
+        // For date inputs: flush the current picker value into the obra model before the
+        // re-render destroys this DOM element (avoids data_inicial / data_final loss).
+        const inp = e.target;
+        if (inp.type === 'date' && !inp.readOnly) {
+          const f = inp.dataset.f;
+          const tr = inp.closest('tr');
+          if (f && tr) {
+            const obra = obras.find(o => o.id === tr.dataset.obraId);
+            if (obra && obra[f] !== inp.value) {
+              obra[f] = inp.value;
+              scheduleSave();
+            }
+          }
+        }
         renderTable(); // Recalculates tags and ensures consistent view
       }
     }, true);
@@ -3121,6 +3300,20 @@
       geomB.className = 'dc-geom-badge ' + (obra.layer ? 'has' : 'none');
       geomB.textContent = obra.layer ? '✓ Com geometria' : '⚠ Sem geometria';
       badges.appendChild(geomB);
+
+      // Street View button — only visible when geometry is a Point
+      const svBtn = document.getElementById('dc-btn-streetview');
+      const isPoint = obra.geometry && obra.geometry.type === 'Point';
+      svBtn.style.display = isPoint ? '' : 'none';
+      // Re-bind click every time to use fresh coordinates
+      svBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (!obra.geometry || obra.geometry.type !== 'Point') return;
+        const [lng, lat] = obra.geometry.coordinates;
+        // Open Google Maps in Street View mode centered on the point
+        const url = `https://www.google.com/maps?q=${lat},${lng}&layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&z=17`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      };
     }
 
     function openDetailCard(obraId, anchorEl) {
@@ -3195,7 +3388,7 @@
             valEl.style.marginTop = '4px';
             valEl.style.padding = '6px';
 
-            ARTESP_LOCAIS.forEach(loc => {
+            CUSTOM_ARTESP_LOCAIS.forEach(loc => {
               const opt = document.createElement('div');
               opt.className = 'tag-option' + (obra.local.includes(loc) ? ' selected' : '');
               opt.textContent = loc;
@@ -3551,7 +3744,7 @@
       container.innerHTML = '';
       const currentLocals = Array.isArray(obra.local) ? obra.local : [];
 
-      ARTESP_LOCAIS.forEach(loc => {
+      CUSTOM_ARTESP_LOCAIS.forEach(loc => {
         const opt = document.createElement('div');
         opt.className = 'tag-option' + (currentLocals.includes(loc) ? ' selected' : '');
         opt.textContent = loc;
@@ -3658,6 +3851,7 @@
           km_inicial: (o.km_inicial !== '' && o.km_inicial != null) ? Number(parseFloat(o.km_inicial).toFixed(3)) : null,
           km_final: (o.km_final !== '' && o.km_final != null) ? Number(parseFloat(o.km_final).toFixed(3)) : null,
           local: Array.isArray(o.local) ? o.local.map(s => s.trim()).filter(Boolean) : (o.local ? String(o.local).split(';').map(s => s.trim()).filter(Boolean) : []),
+          data_inicial: o.data_inicial || null,
           data_final: o.data_final || null,
           observacoes_gerais: (o.observacoes_gerais === "" || o.observacoes_gerais == null) ? null : String(o.observacoes_gerais).trim()
         };
@@ -3851,86 +4045,198 @@
 
     /* ── Timeline (Gantt) Module ── */
     let timelineChart = null;
+    let ganttPage = 0;
+    let ganttPageSize = 20;
+    let ganttLoteFilter = '';
 
-    function updateTimeline() {
-      const canvas = document.getElementById('chart-timeline');
-      if (!canvas) return;
-
-      // Filtrar apenas obras que possuem ambas as datas VÁLIDAS E RECENTES
-      const dataWithDates = obras.filter(o => {
+    // Returns filtered list of obras that have valid dates
+    function getGanttData() {
+      let data = obras.filter(o => {
         if (!o.data_inicial || !o.data_final) return false;
         const s = new Date(o.data_inicial);
         const e = new Date(o.data_final);
-        // Verificar se as datas são válidas e se o ano é maior que 2000
-        return !isNaN(s.getTime()) && !isNaN(e.getTime()) && s.getFullYear() > 2000;
+        return !isNaN(s.getTime()) && !isNaN(e.getTime()) && s.getFullYear() > 2000 && e >= s;
+      });
+      if (ganttLoteFilter) data = data.filter(o => o.lote === ganttLoteFilter);
+      return data;
+    }
+
+    // Rebuild the lote filter dropdown preserving the current selection
+    function updateGanttLoteFilter() {
+      const sel = document.getElementById('gantt-filter-lote');
+      if (!sel) return;
+      const current = sel.value;
+      const lotes = [...new Set(obras.map(o => o.lote).filter(Boolean))].sort();
+      sel.innerHTML = '<option value="">Todos os lotes</option>' +
+        lotes.map(l => `<option value="${l}"${l === current ? ' selected' : ''}>${l}</option>`).join('');
+      sel.value = lotes.includes(current) ? current : '';
+      ganttLoteFilter = sel.value;
+    }
+
+    const GANTT_PALETTE = [
+      'rgba(59,130,246,0.75)',   // blue
+      'rgba(16,185,129,0.75)',   // emerald
+      'rgba(245,158,11,0.75)',   // amber
+      'rgba(139,92,246,0.75)',   // violet
+      'rgba(239,68,68,0.75)',    // red
+      'rgba(20,184,166,0.75)',   // teal
+      'rgba(249,115,22,0.75)',   // orange
+      'rgba(99,102,241,0.75)',   // indigo
+      'rgba(236,72,153,0.75)',   // pink
+      'rgba(132,204,22,0.75)',   // lime
+    ];
+
+    function updateTimeline() {
+      const canvas  = document.getElementById('chart-timeline');
+      const wrap    = document.getElementById('gantt-canvas-wrap');
+      const emptyEl = document.getElementById('gantt-empty');
+      if (!canvas || !wrap) return;
+
+      updateGanttLoteFilter();
+
+      const allData   = getGanttData();
+      const totalPages = Math.max(1, Math.ceil(allData.length / ganttPageSize));
+      if (ganttPage >= totalPages) ganttPage = totalPages - 1;
+      if (ganttPage < 0) ganttPage = 0;
+
+      const startIdx = ganttPage * ganttPageSize;
+      const pageData = allData.slice(startIdx, startIdx + ganttPageSize);
+
+      // ── Update pagination controls ──────────────────
+      const pageLabel  = document.getElementById('gantt-page-label');
+      const countLabel = document.getElementById('gantt-count-label');
+      const prevBtn    = document.getElementById('gantt-prev');
+      const nextBtn    = document.getElementById('gantt-next');
+
+      if (pageLabel)  pageLabel.textContent = `${ganttPage + 1} / ${totalPages}`;
+      if (prevBtn)    prevBtn.disabled  = ganttPage === 0;
+      if (nextBtn)    nextBtn.disabled  = ganttPage >= totalPages - 1;
+      if (countLabel) {
+        if (allData.length) {
+          const end = Math.min(startIdx + ganttPageSize, allData.length);
+          countLabel.textContent = `${startIdx + 1}–${end} de ${allData.length} obras`;
+        } else {
+          countLabel.textContent = '';
+        }
+      }
+
+      // ── Empty state ─────────────────────────────────
+      if (!allData.length) {
+        if (emptyEl) emptyEl.style.display = '';
+        wrap.style.display = 'none';
+        if (timelineChart) { timelineChart.destroy(); timelineChart = null; }
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+      wrap.style.display = '';
+
+      // ── Dynamic height — 28 px per bar ──────────────
+      const BAR_H  = 28;
+      const canvasH = Math.max(160, pageData.length * BAR_H + 36);
+      wrap.style.height = canvasH + 'px';
+
+      // ── Labels ──────────────────────────────────────
+      const labels = pageData.map(o => {
+        const id  = o.id.length > 15 ? o.id.substring(0, 15) + '…' : o.id;
+        const det = o.detalhamento_servico
+          ? ' · ' + (o.detalhamento_servico.length > 20 ? o.detalhamento_servico.substring(0, 20) + '…' : o.detalhamento_servico)
+          : '';
+        return id + det;
       });
 
-      const labels = dataWithDates.map(o => o.id.substring(0, 16) + (o.id.length > 16 ? '…' : ''));
-      const datasets = [{
-        label: 'Progresso da Obra',
-        data: dataWithDates.map(o => {
-          const start = new Date(o.data_inicial);
-          const end = new Date(o.data_final);
-          return [start.getTime(), end.getTime()];
-        }),
-        backgroundColor: (ctx) => {
-          const idx = ctx.dataIndex;
-          const colors = ['rgba(59, 130, 246, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(245, 158, 11, 0.6)', 'rgba(139, 92, 246, 0.6)'];
-          return colors[idx % colors.length];
-        },
-        borderColor: 'rgba(0,0,0,0.05)',
-        borderWidth: 1,
-        borderSkipped: false,
-        borderRadius: 6,
-        barPercentage: 0.7
-      }];
+      // ── Color by lote ────────────────────────────────
+      const loteColorMap = {};
+      let ci = 0;
+      pageData.forEach(o => {
+        if (o.lote && !loteColorMap[o.lote]) loteColorMap[o.lote] = GANTT_PALETTE[ci++ % GANTT_PALETTE.length];
+      });
+      const bgColors     = pageData.map(o => loteColorMap[o.lote] || GANTT_PALETTE[0]);
+      const borderColors = bgColors.map(c => c.replace('0.75', '1'));
 
-      if (timelineChart) {
-        timelineChart.data.labels = labels;
-        timelineChart.data.datasets = datasets;
-        timelineChart.update();
-      } else {
-        timelineChart = new Chart(canvas, {
-          type: 'bar',
-          data: { labels, datasets },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => {
-                    const sStr = new Date(ctx.raw[0]).toLocaleDateString('pt-BR');
-                    const eStr = new Date(ctx.raw[1]).toLocaleDateString('pt-BR');
-                    return `Duração: ${sStr} até ${eStr}`;
-                  }
+      // ── Destroy & recreate (avoids Chart.js resize bugs) ──
+      if (timelineChart) { timelineChart.destroy(); timelineChart = null; }
+
+      timelineChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Duração',
+            data: pageData.map(o => [new Date(o.data_inicial).getTime(), new Date(o.data_final).getTime()]),
+            backgroundColor: bgColors,
+            borderColor: borderColors,
+            borderWidth: 1.5,
+            borderSkipped: false,
+            borderRadius: 4,
+            barPercentage: 0.62,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 200 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const o = pageData[items[0].dataIndex];
+                  return `${o.id}${o.lote ? '  [' + o.lote + ']' : ''}`;
+                },
+                label: (ctx) => {
+                  const o   = pageData[ctx.dataIndex];
+                  const s   = new Date(ctx.raw[0]);
+                  const e   = new Date(ctx.raw[1]);
+                  const dias = Math.round((e - s) / 86400000);
+                  const fmt = d => d.toLocaleDateString('pt-BR');
+                  const lines = [
+                    `  ${fmt(s)}  →  ${fmt(e)}`,
+                    `  Duração: ${dias} dia${dias !== 1 ? 's' : ''}`,
+                  ];
+                  if (o.detalhamento_servico) lines.push(`  ${o.detalhamento_servico}`);
+                  if (o.rodovia) lines.push(`  Rodovia: ${o.rodovia}`);
+                  return lines;
                 }
               }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: {
+                font: { size: 10 },
+                maxTicksLimit: 10,
+                callback: val => new Date(val).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+              }
             },
-            scales: {
-              x: {
-                type: 'linear',
-                position: 'bottom',
-                grid: { color: 'rgba(0,0,0,0.03)' },
-                ticks: {
-                  font: { size: 10 },
-                  callback: (val) => {
-                    const d = new Date(val);
-                    return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-                  }
-                }
-              },
-              y: {
-                grid: { display: false },
-                ticks: { font: { size: 11, weight: '600' } }
+            y: {
+              grid: { display: false },
+              ticks: {
+                font: { size: 11 },
+                color: '#374151',
               }
             }
           }
-        });
-      }
+        }
+      });
     }
+
+    // ── Gantt control events ────────────────────────────
+    document.getElementById('gantt-prev').addEventListener('click', () => { ganttPage--; updateTimeline(); });
+    document.getElementById('gantt-next').addEventListener('click', () => { ganttPage++; updateTimeline(); });
+    document.getElementById('gantt-page-size').addEventListener('change', function () {
+      ganttPageSize = parseInt(this.value, 10);
+      ganttPage = 0;
+      updateTimeline();
+    });
+    document.getElementById('gantt-filter-lote').addEventListener('change', function () {
+      ganttLoteFilter = this.value;
+      ganttPage = 0;
+      updateTimeline();
+    });
 
     /* ═══════════════════════════════════════════════
        VIEW SWITCHING
@@ -3998,25 +4304,100 @@
     /* ═══════════════════════════════════════════════
        CONFIG
     ═══════════════════════════════════════════════ */
-    function applyCfg() {
-      const size = document.getElementById('cfg-font-size').value + 'px';
-      const density = document.getElementById('cfg-density').value;
-      const heights = { compact: '24px', normal: '32px', comfortable: '42px' };
-      document.querySelectorAll('.cell-input').forEach(el => { el.style.fontSize = size; });
-      document.querySelectorAll('#tbody-obras tr').forEach(tr => { tr.style.height = heights[density] || '32px'; });
-    }
+function applyCfg() {
+  const size = document.getElementById('cfg-font-size').value + 'px';
+  const density = document.getElementById('cfg-density').value;
+  const heights = { compact: '24px', normal: '32px', comfortable: '42px' };
+  document.querySelectorAll('.cell-input').forEach(el => { el.style.fontSize = size; });
+  document.querySelectorAll('#tbody-obras tr').forEach(tr => { tr.style.height = heights[density] || '32px'; });
+  
+  // Aplicar configurações avançadas de validação
+  applyAdvancedValidation();
+  
+  // Salvar configurações avançadas no localStorage
+  localStorage.setItem('geoobras_val_advanced', document.getElementById('cfg-val-advanced').checked);
+  localStorage.setItem('geoobras_val_lotes_custom', document.getElementById('cfg-val-lotes-custom').value);
+  localStorage.setItem('geoobras_val_programas_custom', document.getElementById('cfg-val-programas-custom').value);
+  localStorage.setItem('geoobras_val_unidades_custom', document.getElementById('cfg-val-unidades-custom').value);
+  localStorage.setItem('geoobras_val_locais_custom', document.getElementById('cfg-val-locais-custom').value);
+}
 
     document.getElementById('cfg-apply').addEventListener('click', () => {
       applyCfg();
       showToast('Configurações aplicadas!', 'success');
     });
 
-    document.getElementById('cfg-clear-storage').addEventListener('click', () => {
-      if (confirm('Limpar dados salvos do navegador?')) {
-        localStorage.removeItem('geoobras_r1_data');
-        showToast('Armazenamento limpo.', 'success');
-      }
-    });
+document.getElementById('cfg-clear-storage').addEventListener('click', () => {
+  if (confirm('Limpar dados salvos do navegador?')) {
+    localStorage.removeItem('geoobras_r1_data');
+    showToast('Armazenamento limpo.', 'success');
+  }
+});
+
+// Mostrar/ocultar configurações avançadas
+document.getElementById('cfg-val-advanced').addEventListener('change', function() {
+  const advancedSettings = document.getElementById('advanced-validation-settings');
+  advancedSettings.style.display = this.checked ? 'block' : 'none';
+  
+  // Se estiver habilitando, carregar os valores atuais
+  if (this.checked) {
+    document.getElementById('cfg-val-lotes-custom').value = ARTESP_LOTES.join(',');
+    document.getElementById('cfg-val-programas-custom').value = ARTESP_PROGRAMAS.join(',');
+    document.getElementById('cfg-val-unidades-custom').value = ARTESP_UNIDADES.join(',');
+    document.getElementById('cfg-val-locais-custom').value = ARTESP_LOCAIS.join(',');
+  }
+});
+
+// Aplicar configurações avançadas
+function applyAdvancedValidation() {
+  if (document.getElementById('cfg-val-advanced').checked) {
+    // Atualizar as listas de validação com os valores customizados
+    const lotesCustom = document.getElementById('cfg-val-lotes-custom').value;
+    const programasCustom = document.getElementById('cfg-val-programas-custom').value;
+    const unidadesCustom = document.getElementById('cfg-val-unidades-custom').value;
+    const locaisCustom = document.getElementById('cfg-val-locais-custom').value;
+    
+    // Salvar nas variáveis globais
+    if (lotesCustom) CUSTOM_ARTESP_LOTES = lotesCustom.split(',').map(s => s.trim()).filter(Boolean);
+    if (programasCustom) CUSTOM_ARTESP_PROGRAMAS = programasCustom.split(',').map(s => s.trim()).filter(Boolean);
+    if (unidadesCustom) CUSTOM_ARTESP_UNIDADES = unidadesCustom.split(',').map(s => s.trim()).filter(Boolean);
+    if (locaisCustom) CUSTOM_ARTESP_LOCAIS = locaisCustom.split(',').map(s => s.trim()).filter(Boolean);
+    
+    // Regenerar datalists
+    generateDatalists();
+    
+    // Re-renderizar tabela para aplicar novas validações
+    renderTable();
+  }
+}
+
+// Carregar configurações salvas do localStorage
+function loadAdvancedValidationSettings() {
+  const advancedEnabled = localStorage.getItem('geoobras_val_advanced') === 'true';
+  const lotesCustom = localStorage.getItem('geoobras_val_lotes_custom');
+  const programasCustom = localStorage.getItem('geoobras_val_programas_custom');
+  const unidadesCustom = localStorage.getItem('geoobras_val_unidades_custom');
+  const locaisCustom = localStorage.getItem('geoobras_val_locais_custom');
+  
+  document.getElementById('cfg-val-advanced').checked = advancedEnabled;
+  document.getElementById('advanced-validation-settings').style.display = advancedEnabled ? 'block' : 'none';
+  
+  if (lotesCustom) document.getElementById('cfg-val-lotes-custom').value = lotesCustom;
+  if (programasCustom) document.getElementById('cfg-val-programas-custom').value = programasCustom;
+  if (unidadesCustom) document.getElementById('cfg-val-unidades-custom').value = unidadesCustom;
+  if (locaisCustom) document.getElementById('cfg-val-locais-custom').value = locaisCustom;
+  
+  // Aplicar configurações se estiverem habilitadas
+  if (advancedEnabled) {
+    CUSTOM_ARTESP_LOTES = lotesCustom ? lotesCustom.split(',').map(s => s.trim()).filter(Boolean) : [...ARTESP_LOTES];
+    CUSTOM_ARTESP_PROGRAMAS = programasCustom ? programasCustom.split(',').map(s => s.trim()).filter(Boolean) : [...ARTESP_PROGRAMAS];
+    CUSTOM_ARTESP_UNIDADES = unidadesCustom ? unidadesCustom.split(',').map(s => s.trim()).filter(Boolean) : [...ARTESP_UNIDADES];
+    CUSTOM_ARTESP_LOCAIS = locaisCustom ? locaisCustom.split(',').map(s => s.trim()).filter(Boolean) : [...ARTESP_LOCAIS];
+    
+    // Regenerar datalists
+    generateDatalists();
+  }
+}
 
     /* ═══════════════════════════════════════════════
        KEYBOARD SHORTCUTS
@@ -4159,24 +4540,43 @@
       });
     })();
 
-    // Initial capture for undo baseline
-    captureHistory();
-    updateDashboard();
-    makeColsResizable();
+// Initial capture for undo baseline
+captureHistory();
+updateDashboard();
+makeColsResizable();
 
-    // Load persisted data
-    loadPersistedData();
+// Load advanced validation settings
+loadAdvancedValidationSettings();
 
-    // Generate Datalists for ARTESP
-    (function () {
-      const lists = { 'dl-lotes': ARTESP_LOTES, 'dl-programas': ARTESP_PROGRAMAS, 'dl-unidades': ARTESP_UNIDADES, 'dl-locais': ARTESP_LOCAIS };
-      for (const [id, items] of Object.entries(lists)) {
-        const dl = document.createElement('datalist');
-        dl.id = id;
-        items.forEach(it => { const opt = document.createElement('option'); opt.value = it; dl.appendChild(opt); });
-        document.body.appendChild(dl);
-      }
-    })();
+// Load persisted data
+loadPersistedData();
+
+// Generate Datalists for ARTESP
+function generateDatalists() {
+  // Remover datalists existentes
+  const existingLists = ['dl-lotes', 'dl-programas', 'dl-unidades', 'dl-locais'];
+  existingLists.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  
+  // Criar novos datalists com valores personalizados
+  const lists = { 
+    'dl-lotes': CUSTOM_ARTESP_LOTES, 
+    'dl-programas': CUSTOM_ARTESP_PROGRAMAS, 
+    'dl-unidades': CUSTOM_ARTESP_UNIDADES, 
+    'dl-locais': CUSTOM_ARTESP_LOCAIS 
+  };
+  
+  for (const [id, items] of Object.entries(lists)) {
+    const dl = document.createElement('datalist');
+    dl.id = id;
+    items.forEach(it => { const opt = document.createElement('option'); opt.value = it; dl.appendChild(opt); });
+    document.body.appendChild(dl);
+  }
+}
+
+generateDatalists();
   </script>
 </body>
 
